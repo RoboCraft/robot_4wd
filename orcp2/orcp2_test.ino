@@ -1,10 +1,21 @@
 /*
  * ORCP2 test
  *
- * v.0.0.0
+ * v.0.0.1
  *
  * http://robocraft.ru
  */
+
+#define USE_TELEMETRY
+ 
+// telemetry rate (Hz)
+#define TELEMETRY_RATE 		50
+
+// Convert the rate into an interval
+const int TELEMETRY_INTERVAL = 1000 / TELEMETRY_RATE;
+  
+// Track the next time we send telemetry
+unsigned long nextTELEMETRY = TELEMETRY_INTERVAL;
 
 int led = 13;
 
@@ -24,6 +35,7 @@ int index_ = 0;
 int checksum_ = 0;
 
 unsigned char message_in[32];
+unsigned char message_out[128];
 
 void make_message() {
   //digitalWrite(red_led, HIGH);
@@ -39,13 +51,52 @@ void make_message() {
   }
 }
 
-int calculate_checksum(unsigned char* message, int size) {
-  /* calculate checksum */
-  int chk = 0;
+unsigned char calculate_checksum(unsigned char* message, int size) {
+  unsigned char chk = 0;
   for(int i=0; i<size; i++) {
     chk ^= message[i];
   }
   return chk;
+}
+
+int send_message(int id, unsigned char* src, int src_size) {
+	
+	int l=0;
+	
+	/* setup the header */
+	message_out[0] = 0x0D;
+	message_out[1] = 0x0A;
+	message_out[2] = (unsigned char) (id&255);
+	message_out[3] = (unsigned char) (id>>8);
+	message_out[4] = (unsigned char) (src_size&255);
+	message_out[5] = (unsigned char) (src_size>>8);
+	l=6;
+	
+        if(message_out+l != src) {
+          memcpy(message_out+l, src, src_size);
+        }
+        l += src_size;
+	//for(int i=0; i<src_size; i++, l++)
+	//	message_out[l] = src[i];
+
+	/* calculate checksum */
+	message_out[l++] = calculate_checksum(message_out+2, l-2);
+
+	int res = Serial.write(message_out, l);
+	
+	return res;
+}
+
+unsigned char test_string[]="Test\0";
+char buf[64]={"test_str_data:::::::: millis: "};
+int buf_len = 30;
+
+int send_telemetry() {
+  // test string
+  //send_message(0xAC06, test_string, 5);
+  String str = String(millis(), DEC);
+  str.toCharArray(buf+buf_len, 64-buf_len);
+  send_message(0xAC06, (unsigned char*)buf, buf_len+str.length());
 }
 
 void setup() {                
@@ -111,7 +162,16 @@ void loop() {
       }
       mode_ = MODE_FIRST_0D;
     }
-  } // if(Serial.available()) {
+  } // if(Serial.available())
+  
+#if defined(USE_TELEMETRY)
+	if (millis() > nextTELEMETRY) {
+		send_telemetry();
+		nextTELEMETRY += TELEMETRY_INTERVAL;
+	}  
+#endif  // #if USE_TELEMETRY
+
+
 }
 
 
