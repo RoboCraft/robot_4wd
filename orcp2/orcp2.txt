@@ -1,0 +1,347 @@
+= ORCP =
+ORCP - Open Robot Communication Protocol
+
+v.0.2.0
+
+ORCP is Point-to-Point protocol for interaction with modules over serial link.
+
+== Big Message format ==
+
+# useful for several devices on one line
+
+                                                      
+byte    Name/Value      Description 
+---------------------------------------
+0       0x0A		    Header
+1       0X0A             
+2       IR (L)          Identity of Receiver *
+4       IR (H)          
+5       IT (L)          Identity of Transmitter
+6       IT (H)          
+7       MT (L)          Message Type
+8       MT (H)           
+9	    DL (L)          Data length
+10	    DL (H)           
+
+...		Data		    Data
+        CS              Checksum **
+													 
+													 
+=== Notes ===
+
+* Identity 0x0000 and 0xFFFF are statically assigned and may not be used 
+to any device.
+0x0000 - for unsigned devices,
+0xFFFF - broadcast message.
+
+** Checksum for each message is calculated over all fields of the message 
+except Header (first 2 bytes).
+The sum is XOR of all bytes.
+
+=== Overheads ===
+Header + IR + IT + MT + DL + CS:
+2 + 2 + 2 + 2 + 2 + 1 = 11 bytes
+
+== Light Message format ==
+
+# useful for talking with only one device on line
+
+                                                      
+byte    Name/Value      Description 
+---------------------------------------
+0       0x0D		    Header
+1       0X0A             
+2       MT (L)          Message Type
+3       MT (H)           
+4	    DL (L)          Data length
+5	    DL (H)           
+
+...		Data		    Data
+        CS              Checksum
+                                                     
+=== Overheads ===
+2 + 2 + 2 + 1 = 7 bytes
+
+
+==  Arduino/CraftDuino base messages ==
+
+=== get ID ===
+MT = 0xAC00
+ - get ID
+
+Return:
+uint8_t - ID (L)
+uint8_t - ID (H)
+
+
+=== pinMode ===
+MT = 0xAC01
+pinMode() - Set a digital pin to input or output mode.
+
+Data:
+uint8_t - pin number
+uint8_t - pin mode
+
+
+=== digitalRead ===
+MT = 0xAC02
+digitalRead() - returns the last known value read from the digital pin: 
+HIGH or LOW.
+
+Data:
+uint8_t - pin number
+
+Return:
+uint8_t - pin number
+uint8_t - 0x00 (LOW) or 0x01 (HIGH)
+
+
+=== analogRead ===
+MT = 0xAC03
+analogRead() - returns the last known value read from the analog pin: 
+0 (0 volts) to 1023 (5 volts).
+
+Data:
+uint8_t - pin number
+
+Return:
+uint8_t - pin number
+uint8_t - LSB 
+uint8_t - MSB
+
+
+=== digitalWrite ===
+MT = 0xAC04
+digitalWrite() - write to a digital pin (the pin must have been put 
+into output mode with pinMode()).
+
+Params:
+uint8_t - pin number
+uint8_t - value
+
+
+=== analogWrite ===	
+MT = 0xAC05
+analogWrite() - write an analog value (PWM-wave) to a digital pin.
+
+Params:
+uint8_t - pin number
+int16_t - value
+
+=== send string ===	
+MT = 0xAC06
+ - send string
+ 
+DL = <string length>
+ 
+Params:
+....
+
+== Specific messages ==
+
+=== Read Encoder ===
+MT = 0xAC20
+ - read encoder
+
+Data:
+uint8_t - encoder number
+
+Return:
+uint8_t - encoder number
+int16_t - value 
+
+=== Read All Encoders ===	
+MT = 0xAC21
+ - read all encoders
+ 
+Return:
+...
+uint8_t - encoder number 
+int16_t - value
+...
+
+
+=== Reset Encoder ===
+MT = 0xAC22
+ - reset encoder
+
+Data:
+uint8_t - encoder number
+
+
+=== Reset All Encoders ===
+MT = 0xAC23
+ - reset all encoders
+
+ 
+=== Read Distance Sensor ===
+MT = 0xAC30
+ - read distance sensor
+
+Data:
+uint8_t - sensor number
+
+Return:
+uint8_t - sensor number
+uint32_t - Distance
+
+
+=== Read Voltage Sensor ===
+MT = 0xAC31
+ - read voltage sensor
+
+Data:
+uint8_t - sensor number
+
+Return:
+uint8_t - sensor number
+int32_t - Voltage
+
+
+=== Read Temperature Sensor ===
+MT = 0xAC32
+ - read temperature sensor
+
+Data:
+uint8_t - sensor number
+
+Return:
+uint8_t - sensor number
+int32_t - Temperature
+
+
+=== Read Light Sensor ===
+MT = 0xAC33
+ - read light sensor
+
+Data:
+uint8_t - sensor number
+
+Return:
+uint8_t - sensor number
+int32_t - Light
+
+=== Servo Write ===
+MT = 0xAC40
+ - servo write 
+
+Params:
+uint8_t - servo number
+int16_t - value
+
+=== Servo Read ===
+MT = 0xAC41
+ - return servo value
+
+Data:
+uint8_t - pin number
+
+Return:
+uint8_t - sevo number
+int16_t - value
+
+=== Motor Write ===
+MT = 0xAC42
+ - motor write 
+
+Params:
+uint8_t - motor number
+int16_t - value
+
+
+=== All Motors Write ===
+MT = 0xAC43
+ - all motors write 
+
+Params:
+int16_t - value
+
+
+== Robotic messages ==
+
+=== IMU Angles ===
+MT = 0xB030
+ - get IMU angles
+
+Return:
+int16_t - Yaw
+int16_t - Pitch
+int16_t - Roll
+
+=== IMU Raw data ===
+MT = 0xB031
+ - get IMU Raw data
+ 
+Return:
+int16_t - Accelerometer 1
+int16_t - Accelerometer 2
+int16_t - Accelerometer 3
+int16_t - Magnetometer 1
+int16_t - Magnetometer 2
+int16_t - Magnetometer 3
+int16_t - Gyro 1
+int16_t - Gyro 2
+int16_t - Gyro 3
+
+== Robotic messages (4WD) ==
+
+=== Robot Drive Telemetry ===
+MT = 0xB410
+ - get drive telemerty (4WD)
+
+uint8_t - Bamper (flag: 0x1 - first, 0x2 - second, 0x4 - third, 0x8 - fourth)
+int32_t - Encoder 1
+int32_t - Encoder 2
+int32_t - Encoder 3
+int32_t - Encoder 4
+int16_t - PWM 1
+int16_t - PWM 2
+int16_t - PWM 3
+int16_t - PWM 4
+
+=== Robot Sensors ===
+MT = 0xB420
+ - get sensors (4WD)
+
+uint32_t - US
+uint32_t - IR 1
+uint32_t - IR 2
+uint32_t - IR 3
+uint32_t - IR 4
+int32_t - Voltage
+
+=== Robot Telemetry ===
+MT = 0xB430
+ - get robot telemetry (4WD)
+
+uint8_t - Bamper (flag: 0x1 - first, 0x2 - second, 0x4 - third, 0x8 - fourth)
+int32_t - Encoder 1
+int32_t - Encoder 2
+int32_t - Encoder 3
+int32_t - Encoder 4
+int16_t - PWM 1
+int16_t - PWM 2
+int16_t - PWM 3
+int16_t - PWM 4
+uint32_t - US
+uint32_t - IR 1
+uint32_t - IR 2
+uint32_t - IR 3
+uint32_t - IR 4
+uint32_t - Voltage
+
+
+= Robot (4WD) bandwidth =
+
+== 3 messages ==
+raw IMU 		: 18 + 7 = 25
+drive telemetry	: 25 + 7 = 32
+sensors 		: 24 + 7 = 31
+            Sum : 67 + 21 = 88 => Max: 65 Hz
+			
+== 2 messages ==
+
+raw IMU 		: 18 + 7 = 25
+telemetry	    : 49 + 7 = 56
+            Sum : 67 + 14 = 81 => Max: 71 Hz
+
