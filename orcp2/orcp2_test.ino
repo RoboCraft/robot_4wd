@@ -1,7 +1,7 @@
 /*
  * ORCP2 test
  *
- * v.0.0.4
+ * v.0.0.5
  *
  * http://robocraft.ru
  */
@@ -89,7 +89,23 @@ int send_telemetry() {
   len = serialize_robot_4wd( &robot_data, 
 			message_out+ORCP2_PACKET_HEADER_LENGTH, 
 			sizeof(message_out)-ORCP2_PACKET_HEADER_LENGTH );
-  send_message(ORCP2_MESSAGE_ROBOT_4WD_TELEMETRY, message_out+ORCP2_PACKET_HEADER_LENGTH, len);
+  return send_message(ORCP2_MESSAGE_ROBOT_4WD_TELEMETRY, message_out+ORCP2_PACKET_HEADER_LENGTH, len);
+}
+
+int send_drive_telemetry() {
+  uint16_t len=0;
+  len = serialize_robot_4wd_drive_part( &robot_data, 
+			message_out+ORCP2_PACKET_HEADER_LENGTH, 
+			sizeof(message_out)-ORCP2_PACKET_HEADER_LENGTH );
+  return send_message(ORCP2_MESSAGE_ROBOT_4WD_DRIVE_TELEMETRY, message_out+ORCP2_PACKET_HEADER_LENGTH, len);
+}
+
+int send_sensors_telemetry() {
+  uint16_t len=0;
+  len = serialize_robot_4wd_sensors_part( &robot_data, 
+			message_out+ORCP2_PACKET_HEADER_LENGTH, 
+			sizeof(message_out)-ORCP2_PACKET_HEADER_LENGTH );
+  return send_message(ORCP2_MESSAGE_ROBOT_4WD_SENSORS_TELEMETRY, message_out+ORCP2_PACKET_HEADER_LENGTH, len);
 }
 
 void setup() {                
@@ -187,7 +203,9 @@ void loop() {
 	if (millis() > nextTELEMETRY) {
         send_test_string();
 		send_imu();
-		send_telemetry();
+		//send_telemetry();
+		send_drive_telemetry();
+		send_sensors_telemetry();
 		nextTELEMETRY += TELEMETRY_INTERVAL;
 	}  
 #endif  // #if USE_TELEMETRY
