@@ -1,7 +1,7 @@
 /*
  * ORCP2 test
  *
- * v.0.0.3
+ * v.0.0.4
  *
  * http://robocraft.ru
  */
@@ -45,6 +45,7 @@ unsigned char message_in[128];
 unsigned char message_out[256];
 
 IMU3_data raw_imu_data;
+Robot_4WD robot_data;
 
 void make_message() {
   int i=0;
@@ -65,23 +66,30 @@ int send_message(int id, unsigned char* src, int src_size) {
 	return res;
 }
 
-char buf[128]={"abcdefghijklmnopqru test_str_data:::::::: millis: "};
-int buf_len = 50;
+char buf[64]={"str: millis: "};
+int buf_len = 13;
 
 int send_test_string() {
   String str = String(millis(), DEC);
-  str.toCharArray(buf+buf_len, 128-buf_len);
+  str.toCharArray(buf+buf_len, sizeof(buf)-buf_len);
   send_message(ORCP2_SEND_STRING, (unsigned char*)buf, buf_len+str.length());
 }
 
-int send_telemetry() {
-  
-  uint16_t len=0;
+int send_imu() {
   // raw IMU data
+  uint16_t len=0;
   len = serialize_imu3_data( &raw_imu_data, 
 			message_out+ORCP2_PACKET_HEADER_LENGTH, 
 			sizeof(message_out)-ORCP2_PACKET_HEADER_LENGTH );
   send_message(ORCP2_MESSAGE_IMU_RAW_DATA, message_out+ORCP2_PACKET_HEADER_LENGTH, len);
+}
+
+int send_telemetry() {
+  uint16_t len=0;
+  len = serialize_robot_4wd( &robot_data, 
+			message_out+ORCP2_PACKET_HEADER_LENGTH, 
+			sizeof(message_out)-ORCP2_PACKET_HEADER_LENGTH );
+  send_message(ORCP2_MESSAGE_ROBOT_4WD_TELEMETRY, message_out+ORCP2_PACKET_HEADER_LENGTH, len);
 }
 
 void setup() {                
@@ -100,6 +108,22 @@ void setup() {
   raw_imu_data.Gyro[0] = 7000;
   raw_imu_data.Gyro[1] = 8000;
   raw_imu_data.Gyro[2] = 9000;
+  
+  robot_data.Bamper = 0;
+  robot_data.Encoder[0]=10;
+  robot_data.Encoder[1]=20;
+  robot_data.Encoder[2]=30;
+  robot_data.Encoder[3]=40;
+  robot_data.PWM[0]=100;
+  robot_data.PWM[1]=200;
+  robot_data.PWM[2]=300;
+  robot_data.PWM[3]=400;
+  robot_data.US[0]=1000;
+  robot_data.IR[0]=1100;
+  robot_data.IR[1]=2100;
+  robot_data.IR[2]=3100;
+  robot_data.IR[3]=4100;
+  robot_data.Voltage=5000;
 }
 
 void loop() {
@@ -161,7 +185,8 @@ void loop() {
   
 #if defined(USE_TELEMETRY)
 	if (millis() > nextTELEMETRY) {
-                send_test_string();
+        send_test_string();
+		send_imu();
 		send_telemetry();
 		nextTELEMETRY += TELEMETRY_INTERVAL;
 	}  
