@@ -1,7 +1,7 @@
 /*
  * ORCP2 test
  *
- * v.0.0.2
+ * v.0.0.3
  *
  * http://robocraft.ru
  */
@@ -41,15 +41,16 @@ int topic_ = 0;
 int index_ = 0;
 int checksum_ = 0;
 
-unsigned char message_in[32];
-unsigned char message_out[128];
+unsigned char message_in[128];
+unsigned char message_out[256];
+
+IMU3_data raw_imu_data;
 
 void make_message() {
-  //digitalWrite(red_led, HIGH);
   int i=0;
   int val = 0;
   switch(topic_) {
-  case 0xAC04:
+  case ORCP2_DIGITAL_WRITE:
     // digitalWrite
     digitalWrite(message_in[0], message_in[1]);
     break;
@@ -59,46 +60,28 @@ void make_message() {
 }
 
 int send_message(int id, unsigned char* src, int src_size) {
-	
 	int l = orcp2::to_buffer(id, src, src_size, message_out, sizeof(message_out));
-	/**
-	int l=0;
-	
-	// setup the header
-	message_out[0] = 0x0D;
-	message_out[1] = 0x0A;
-	message_out[2] = (unsigned char) (id&255);
-	message_out[3] = (unsigned char) (id>>8);
-	message_out[4] = (unsigned char) (src_size&255);
-	message_out[5] = (unsigned char) (src_size>>8);
-	l=6;
-	
-        if(message_out+l != src) {
-          memcpy(message_out+l, src, src_size);
-        }
-        l += src_size;
-	//for(int i=0; i<src_size; i++, l++)
-	//	message_out[l] = src[i];
-
-	// calculate checksum
-	message_out[l++] = orcp2::calc_checksum(message_out+2, l-2);
-	/**/
-
-	int res = Serial.write(message_out, l);
-	
+	int res = Serial.write(message_out, l);	
 	return res;
 }
 
-unsigned char test_string[]="Test\0";
-char buf[64]={"test_str_data:::::::: millis: "};
-int buf_len = 30;
+char buf[128]={"abcdefghijklmnopqru test_str_data:::::::: millis: "};
+int buf_len = 50;
+
+int send_test_string() {
+  String str = String(millis(), DEC);
+  str.toCharArray(buf+buf_len, 128-buf_len);
+  send_message(ORCP2_SEND_STRING, (unsigned char*)buf, buf_len+str.length());
+}
 
 int send_telemetry() {
-  // test string
-  //send_message(0xAC06, test_string, 5);
-  String str = String(millis(), DEC);
-  str.toCharArray(buf+buf_len, 64-buf_len);
-  send_message(0xAC06, (unsigned char*)buf, buf_len+str.length());
+  
+  uint16_t len=0;
+  // raw IMU data
+  len = serialize_imu3_data( &raw_imu_data, 
+			message_out+ORCP2_PACKET_HEADER_LENGTH, 
+			sizeof(message_out)-ORCP2_PACKET_HEADER_LENGTH );
+  send_message(ORCP2_MESSAGE_IMU_RAW_DATA, message_out+ORCP2_PACKET_HEADER_LENGTH, len);
 }
 
 void setup() {                
@@ -107,6 +90,16 @@ void setup() {
   digitalWrite(led, LOW);
 
   Serial.begin(BAUDRATE);
+  
+  raw_imu_data.Accelerometer[0] = 100;
+  raw_imu_data.Accelerometer[1] = 200;
+  raw_imu_data.Accelerometer[2] = 300;
+  raw_imu_data.Magnetometer[0] = 4000;
+  raw_imu_data.Magnetometer[1] = 5000;
+  raw_imu_data.Magnetometer[2] = 6000;
+  raw_imu_data.Gyro[0] = 7000;
+  raw_imu_data.Gyro[1] = 8000;
+  raw_imu_data.Gyro[2] = 9000;
 }
 
 void loop() {
@@ -168,6 +161,7 @@ void loop() {
   
 #if defined(USE_TELEMETRY)
 	if (millis() > nextTELEMETRY) {
+                send_test_string();
 		send_telemetry();
 		nextTELEMETRY += TELEMETRY_INTERVAL;
 	}  
