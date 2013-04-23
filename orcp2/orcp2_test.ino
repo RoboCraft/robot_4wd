@@ -1,12 +1,19 @@
 /*
  * ORCP2 test
  *
- * v.0.0.1
+ * v.0.0.2
  *
  * http://robocraft.ru
  */
 
+#include "orcp2.h"
+#include "robot_4wd.h"
+#include "robot_sensors.h"
+#include "imu.h"
+ 
 #define USE_TELEMETRY
+
+#define BAUDRATE 57600
  
 // telemetry rate (Hz)
 #define TELEMETRY_RATE 		50
@@ -51,19 +58,13 @@ void make_message() {
   }
 }
 
-unsigned char calculate_checksum(unsigned char* message, int size) {
-  unsigned char chk = 0;
-  for(int i=0; i<size; i++) {
-    chk ^= message[i];
-  }
-  return chk;
-}
-
 int send_message(int id, unsigned char* src, int src_size) {
 	
+	int l = orcp2::to_buffer(id, src, src_size, message_out, sizeof(message_out));
+	/**
 	int l=0;
 	
-	/* setup the header */
+	// setup the header
 	message_out[0] = 0x0D;
 	message_out[1] = 0x0A;
 	message_out[2] = (unsigned char) (id&255);
@@ -79,8 +80,9 @@ int send_message(int id, unsigned char* src, int src_size) {
 	//for(int i=0; i<src_size; i++, l++)
 	//	message_out[l] = src[i];
 
-	/* calculate checksum */
-	message_out[l++] = calculate_checksum(message_out+2, l-2);
+	// calculate checksum
+	message_out[l++] = orcp2::calc_checksum(message_out+2, l-2);
+	/**/
 
 	int res = Serial.write(message_out, l);
 	
@@ -104,7 +106,7 @@ void setup() {
   
   digitalWrite(led, LOW);
 
-  Serial.begin(57600);
+  Serial.begin(BAUDRATE);
 }
 
 void loop() {
