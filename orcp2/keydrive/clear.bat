@@ -1,4 +1,3 @@
-del .\*.o
 del .\*.ncb
 del .\*.suo /A H
 del .\Debug\*.*db
@@ -24,10 +23,3 @@ del .\Release\*.ilk
 del .\Release\BuildLog.htm
 rmdir .\Release
 
-cd tests
-clear.bat
-cd ..
-
-cd keydrive
-clear.bat
-cd ..

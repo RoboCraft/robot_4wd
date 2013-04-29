@@ -106,8 +106,7 @@ uint8_t - pin number
 
 Return:
 uint8_t - pin number
-uint8_t - LSB 
-uint8_t - MSB
+uint16_t - value
 
 
 === digitalWrite ===

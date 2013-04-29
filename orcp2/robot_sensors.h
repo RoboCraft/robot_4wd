@@ -14,7 +14,14 @@
 # else
 #  include "WProgram.h"
 # endif
-#endif //#if defined(ARDUINO)
 
+// store motor pins
+typedef struct MOTOR
+{
+  int in;     // INVERTOR INPUT (dir)
+  int enable; // ENABLE (pwm)
+} MOTOR;
+
+#endif //#if defined(ARDUINO)
 
 #endif //#ifndef _ROBOT_SENSORS_H_

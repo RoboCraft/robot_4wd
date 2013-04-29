@@ -140,6 +140,9 @@ namespace orcp2 {
 
 		int recv(uint8_t* dst, uint16_t dst_size);
 
+		void motorWrite(int id, uint16_t value);
+		void motorsWrite(uint16_t value);
+
 	private:
 		Stream &serial;
 

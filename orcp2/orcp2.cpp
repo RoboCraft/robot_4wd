@@ -258,4 +258,29 @@ int orcp2::ORCP2::recv(uint8_t* dst, uint16_t dst_size)
 	return 0;
 }
 
+void orcp2::ORCP2::motorWrite(int id, uint16_t value)
+{
+	uint8_t msg[3];
+	msg[0] = (uint8_t)id;
+	orcp2::copy_int16(msg+1, value);
+
+	uint8_t buf[ ORCP2_MIN_PACKET_LENGTH + sizeof(msg) ];
+
+	uint16_t msg_size = orcp2::to_buffer(ORCP2_MOTOR_WRITE, msg, sizeof(msg), buf, sizeof(buf));
+
+	int res = serial.write(buf, sizeof(buf));
+}
+
+void orcp2::ORCP2::motorsWrite(uint16_t value)
+{
+	uint8_t msg[2];
+	orcp2::copy_int16(msg, value);
+
+	uint8_t buf[ ORCP2_MIN_PACKET_LENGTH + sizeof(msg) ];
+
+	uint16_t msg_size = orcp2::to_buffer(ORCP2_MOTORS_WRITE, msg, sizeof(msg), buf, sizeof(buf));
+
+	int res = serial.write(buf, sizeof(buf));
+}
+
 #endif //#ifndef ARDUINO
