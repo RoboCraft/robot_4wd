@@ -619,13 +619,14 @@ void loop() {
     Read_Magn(); // Read magnetometer
     Read_US();
     Read_IR();
+    Read_Voltage();
 
     send_imu();
     send_sensors_telemetry();
 #endif //#if defined(IMU_BOARD)
 	
 #if defined(DRIVE_BOARD)
-    Read_Voltage();
+    //Read_Voltage();
     Read_Bampers();
 
     send_drive_telemetry();
