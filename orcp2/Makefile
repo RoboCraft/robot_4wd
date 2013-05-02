@@ -7,7 +7,7 @@
 CC		:= g++
 TARGET	:= orcp2
 
-OBJECTS := orcp2.o serial.o times.o
+OBJECTS := orcp2.o serial.o times.o robot_4wd.o imu.o
 
 CFLAGS		:= -I. -DLINUX=1 
 
