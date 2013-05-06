@@ -48,6 +48,7 @@
 #define ORCP2_MESSAGE_ROBOT_4WD_DRIVE_TELEMETRY		0xB410
 #define ORCP2_MESSAGE_ROBOT_4WD_SENSORS_TELEMETRY	0xB420
 #define ORCP2_MESSAGE_ROBOT_4WD_TELEMETRY			0xB430
+#define ORCP2_MESSAGE_ROBOT_4WD_DRIVE				0xB440
 
 // pin modes
 #define ORCP2_MODE_INPUT    0x00
@@ -142,6 +143,8 @@ namespace orcp2 {
 
 		void motorWrite(int id, uint16_t value);
 		void motorsWrite(uint16_t value);
+
+		void drive_4wd(uint16_t pwm0, uint16_t pwm1, uint16_t pwm2, uint16_t pwm3);
 
 	private:
 		Stream &serial;

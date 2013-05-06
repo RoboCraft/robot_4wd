@@ -283,4 +283,25 @@ void orcp2::ORCP2::motorsWrite(uint16_t value)
 	int res = serial.write(buf, sizeof(buf));
 }
 
+void orcp2::ORCP2::drive_4wd(uint16_t pwm0, uint16_t pwm1, uint16_t pwm2, uint16_t pwm3)
+{
+	uint8_t msg[4*sizeof(uint16_t)];
+	int l=0;
+	
+	orcp2::copy_int16(msg+l, pwm0);
+	l += sizeof(uint16_t);
+	orcp2::copy_int16(msg+l, pwm1);
+	l += sizeof(uint16_t);
+	orcp2::copy_int16(msg+l, pwm2);
+	l += sizeof(uint16_t);
+	orcp2::copy_int16(msg+l, pwm3);
+	l += sizeof(uint16_t);
+
+	uint8_t buf[ ORCP2_MIN_PACKET_LENGTH + sizeof(msg) ];
+
+	uint16_t msg_size = orcp2::to_buffer(ORCP2_MESSAGE_ROBOT_4WD_DRIVE, msg, sizeof(msg), buf, sizeof(buf));
+
+	int res = serial.write(buf, sizeof(buf));
+}
+
 #endif //#ifndef ARDUINO

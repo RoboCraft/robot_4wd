@@ -1,7 +1,7 @@
 /*
  * Robot 4WD Firmware (with ORCP2)
  *
- * v.0.0.2
+ * v.0.0.3
  *
  * http://robocraft.ru
  */
@@ -14,7 +14,8 @@
 // motors + encoders + bumper + voltage
 #define DRIVE_BOARD
 
-// debug
+// debug  (use pins 10, 9  for Software Serial)
+// !!! comment it for read encoders !!!
 //#define DEBUG
 
 #include "orcp2.h"
@@ -105,7 +106,8 @@ int BACKWARD = LOW;
 int send_drive_telemetry();
 void motor_drive(int motor_id, int dir, int pwm);
 
-void motor_drive(int motor_id, int pwm) {
+void motor_drive(int motor_id, int pwm) 
+{
   if(pwm >= 0) {
     motor_drive(motor_id, FORWARD, pwm);
   }
@@ -119,16 +121,18 @@ void motor_drive(int motor_id, int pwm) {
 #if defined(DEBUG)
 #include <SoftwareSerial.h>
 
-SoftwareSerial mySerial(19, 20); // RX, TX
+SoftwareSerial mySerial(10, 9); // RX, TX
 #endif //#if defined(DEBUG)
 
-int send_message(int id, unsigned char* src, int src_size) {
+int send_message(int id, unsigned char* src, int src_size) 
+{
   int l = orcp2::to_buffer(id, src, src_size, message_out, sizeof(message_out));
   int res = Serial.write(message_out, l);	
   return res;
 }
 
-void make_message() {
+void make_message() 
+{
   int i = 0;
   uint8_t val8 = 0;
   uint16_t val16 = 0;
@@ -136,7 +140,7 @@ void make_message() {
   uint16_t len = 0;
   
 #if defined(DEBUG)
-mySerial.print("[i] Message: ");
+mySerial.print("[i] msg: ");
 mySerial.println(topic_, HEX);
 #endif //#if defined(DEBUG)  
   
@@ -204,6 +208,15 @@ mySerial.println(topic_, HEX);
 	  motor_drive(i, val16);
 	}
   break;
+  case ORCP2_MESSAGE_ROBOT_4WD_DRIVE:
+    val8=0;
+    for(i=0; i<MOTORS_COUNT; i++) {
+	  val16 = message_in[val8]; // value
+	  val16 += message_in[val8+1]<<8;
+	  motor_drive(i, val16);
+	  val8 += 2;
+	}
+  break;
   case ORCP2_MESSAGE_ROBOT_4WD_DRIVE_TELEMETRY:
     send_drive_telemetry();
   break;
@@ -214,14 +227,16 @@ mySerial.println(topic_, HEX);
   }
 }
 
-int send_string(char *src) {
+int send_string(char *src) 
+{
   if(!src)
     return -1;
   return send_message(ORCP2_SEND_STRING, (unsigned char*)src, strlen(src));
 }
 
 #if defined(IMU_BOARD)
-int send_imu() {
+int send_imu() 
+{
   // raw IMU data
   uint16_t len=0;
   len = serialize_imu3_data( &raw_imu_data, 
@@ -231,7 +246,8 @@ int send_imu() {
 }
 #endif
 
-int send_telemetry() {
+int send_telemetry() 
+{
   uint16_t len=0;
   len = serialize_robot_4wd( &robot_data, 
 								message_out+ORCP2_PACKET_HEADER_LENGTH,  
@@ -240,7 +256,8 @@ int send_telemetry() {
 }
 
 #if defined(DRIVE_BOARD)
-int send_drive_telemetry() {
+int send_drive_telemetry() 
+{
   uint16_t len=0;
   len = serialize_robot_4wd_drive_part( &robot_data, 
 										  message_out+ORCP2_PACKET_HEADER_LENGTH, 
@@ -250,7 +267,8 @@ int send_drive_telemetry() {
 #endif
 
 #if defined(IMU_BOARD)
-int send_sensors_telemetry() {
+int send_sensors_telemetry() 
+{
   uint16_t len=0;
   len = serialize_robot_4wd_sensors_part( &robot_data, 
 										  message_out+ORCP2_PACKET_HEADER_LENGTH, 
@@ -443,17 +461,29 @@ void Read_Gyro()
   }
 }
 
-void Read_US() {
+void Read_US() 
+{
   robot_data.US[0] = ultrasonic.Ranging(CM);       // get distance
   if ((robot_data.US[0] < 1) || (robot_data.US[0] > 350)) {
     robot_data.US[0] = 350;
   }
 }
 
-void Read_IR() {
+void Read_IR() 
+{
   for(int j=0; j<INFRARED_COUNT; j++) {
     robot_data.IR[j] = 65*pow(analogRead(IRpin[j])*0.0048828125, -1.10);
   }
+}
+
+void Read_Voltage() 
+{
+  //$TODO
+
+  // 4,883mV & divider 1/6
+  float val = (float)analogRead(battVoltPin)*4.883*6.000;
+
+  robot_data.Voltage = (uint32_t)(val*1000);
 }
 
 #endif //#if defined(IMU_BOARD)
@@ -464,6 +494,15 @@ void motor_drive(int motor_id, int dir, int pwm)
 {
   if(motor_id < 0 || motor_id >= MOTORS_COUNT)
     return;
+	
+#if defined(DEBUG)
+mySerial.print("[i] drive: id: ");
+mySerial.print(motor_id, DEC);
+mySerial.print(" dir: ");
+mySerial.print(dir, DEC);
+mySerial.print(" pwm: ");
+mySerial.println(pwm, DEC);
+#endif //#if defined(DEBUG) 	
 
   digitalWrite(motors[motor_id].in, dir);
   analogWrite(motors[motor_id].enable, pwm);
@@ -494,16 +533,8 @@ void Read_Encoders()
   }
 }
 
-void Read_Voltage() {
-  //$TODO
-
-  // 4,883mV & divider 1/6
-  float val = (float)analogRead(battVoltPin)*4.883*6.000;
-
-  robot_data.Voltage = (uint32_t)(val*1000);
-}
-
-void Read_Bampers() {
+void Read_Bampers() 
+{
   robot_data.Bamper = 0;
   for (int i=0; i<BAMPER_COUNT; i++) {
     bumperState[i] = digitalRead ( bumperPin[i]);
@@ -515,7 +546,8 @@ void Read_Bampers() {
 
 #endif //#if defined(DRIVE_BOARD)
 
-void setup() {                
+void setup() 
+{                
   Serial.begin(BAUDRATE);
 
 #if defined(IMU_BOARD)  
@@ -539,9 +571,6 @@ void setup() {
   int i;
   for(i=0; i<MOTORS_COUNT; i++) {
     pinMode(motors[i].in, OUTPUT);
-    pinMode(motors[i].in, OUTPUT);
-    pinMode(motors[i].in, OUTPUT);
-    pinMode(motors[i].in, OUTPUT);
   }
 
   for(i=0; i<MOTORS_COUNT; i++) {
@@ -552,6 +581,7 @@ void setup() {
     pinMode(bumperPin[i], INPUT); 
   }
 
+#if !defined(DEBUG)  
   for(i=0; i<ENCODERS_COUNT; i++) {
     pinMode(encoderPin[i], INPUT); 
     encoderOldState[i] = digitalRead(encoderPin[i]);
@@ -559,6 +589,7 @@ void setup() {
 
   Timer1.initialize(300); 
   Timer1.attachInterrupt(Read_Encoders); 
+#endif  //#if !defined(DEBUG)  
   
 #endif //#if defined(DRIVE_BOARD)
 
@@ -568,7 +599,9 @@ mySerial.println("[i] Start");
 #endif //#if defined(DEBUG)
 }
 
-void loop() {
+void loop() 
+{
+  // read message from serial
   if(Serial.available()) {
     int data = Serial.read();
     if(data < 0 ) {
@@ -633,14 +666,13 @@ void loop() {
     Read_Magn(); // Read magnetometer
     Read_US();
     Read_IR();
-	Read_Voltage();
+    Read_Voltage();
 
     send_imu();
     send_sensors_telemetry();
 #endif //#if defined(IMU_BOARD)
 	
 #if defined(DRIVE_BOARD)
-    //Read_Voltage();
     Read_Bampers();
 
     send_drive_telemetry();

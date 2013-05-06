@@ -97,17 +97,20 @@ int main(int argc, char* argv[])
 		else if(key == 'a' || key == 'A') {
 			printf("[i] left %d\n", speed);
 			
-			orcp.motorWrite(1, speed);
-			orcp.motorWrite(3, speed);
-			orcp.motorWrite(0, -speed);
-			orcp.motorWrite(2, -speed);			
+			orcp.drive_4wd(-speed, speed, -speed, speed);
+			//orcp.motorWrite(1, speed);
+			//orcp.motorWrite(3, speed);
+			//orcp.motorWrite(0, -speed);
+			//orcp.motorWrite(2, -speed);			
 		}
 		else if(key == 'd' || key == 'D') {
 			printf("[i] right %d\n", speed);
-			orcp.motorWrite(1, -speed);
-			orcp.motorWrite(3, -speed);
-			orcp.motorWrite(0, speed);
-			orcp.motorWrite(2, speed);
+
+			orcp.drive_4wd(speed, -speed, speed, -speed);
+			//orcp.motorWrite(1, -speed);
+			//orcp.motorWrite(3, -speed);
+			//orcp.motorWrite(0, speed);
+			//orcp.motorWrite(2, speed);
 		}
 
 		if( res = serial.waitInput(500) ) {

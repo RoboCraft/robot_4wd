@@ -329,6 +329,14 @@ uint32_t - IR 3
 uint32_t - IR 4
 uint32_t - Voltage
 
+=== Robot Drive ===
+MT = 0xB440
+ - set robot PWM (4WD)
+ 
+int16_t - PWM 1
+int16_t - PWM 2
+int16_t - PWM 3
+int16_t - PWM 4
 
 = Robot (4WD) bandwidth =
 
