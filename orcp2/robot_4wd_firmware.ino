@@ -1,7 +1,7 @@
 /*
  * Robot 4WD Firmware (with ORCP2)
  *
- * v.0.0.1
+ * v.0.0.2
  *
  * http://robocraft.ru
  */
@@ -13,6 +13,9 @@
 
 // motors + encoders + bumper + voltage
 #define DRIVE_BOARD
+
+// debug
+//#define DEBUG
 
 #include "orcp2.h"
 #include "robot_4wd.h"
@@ -58,12 +61,8 @@ Robot_4WD robot_data;
 #include <Ultrasonic.h>
 
 Ultrasonic ultrasonic(13, 12); // Trig - 123, Echo - 12
-int USdistance = 0;
-
-int IRpin[4] = {
-  0,1,2,3};
-float IRdistance[4] = {
-  0,0,0,0};
+int IRpin[4] = { 0, 1, 2, 3 };
+int battVoltPin = A7;
 
 // If set true, an error message will be output if we fail to read sensor data.
 // Message format: "!ERR: reading <sensor>", followed by "\r\n".
@@ -91,8 +90,7 @@ int encoderOldState[] = {0, 0, 0, 0};
 
 int bumperPin[] = {14, 15, 16, 17}; 
 int bumperState[] = {0, 0, 0, 0};
-int batteryVoltage = 0;
-int battVoltPin = A7;
+//int battVoltPin = A7;
 
 MOTOR motors [MOTORS_COUNT] = { 
   { 12, 11 },
@@ -118,6 +116,12 @@ void motor_drive(int motor_id, int pwm) {
 
 #endif //#if defined(DRIVE_BOARD)
 
+#if defined(DEBUG)
+#include <SoftwareSerial.h>
+
+SoftwareSerial mySerial(19, 20); // RX, TX
+#endif //#if defined(DEBUG)
+
 int send_message(int id, unsigned char* src, int src_size) {
   int l = orcp2::to_buffer(id, src, src_size, message_out, sizeof(message_out));
   int res = Serial.write(message_out, l);	
@@ -130,6 +134,11 @@ void make_message() {
   uint16_t val16 = 0;
   unsigned char* msg=0;
   uint16_t len = 0;
+  
+#if defined(DEBUG)
+mySerial.print("[i] Message: ");
+mySerial.println(topic_, HEX);
+#endif //#if defined(DEBUG)  
   
   switch(topic_) {
   case ORCP2_PIN_MODE:
@@ -443,7 +452,7 @@ void Read_US() {
 
 void Read_IR() {
   for(int j=0; j<INFRARED_COUNT; j++) {
-    robot_data.IR[j] = 65*pow(analogRead(robot_data.IR[j])*0.0048828125, -1.10);
+    robot_data.IR[j] = 65*pow(analogRead(IRpin[j])*0.0048828125, -1.10);
   }
 }
 
@@ -552,6 +561,11 @@ void setup() {
   Timer1.attachInterrupt(Read_Encoders); 
   
 #endif //#if defined(DRIVE_BOARD)
+
+#if defined(DEBUG)
+mySerial.begin(9600);
+mySerial.println("[i] Start");
+#endif //#if defined(DEBUG)
 }
 
 void loop() {
@@ -619,7 +633,7 @@ void loop() {
     Read_Magn(); // Read magnetometer
     Read_US();
     Read_IR();
-    Read_Voltage();
+	Read_Voltage();
 
     send_imu();
     send_sensors_telemetry();
