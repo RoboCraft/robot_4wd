@@ -57,7 +57,7 @@ void motor4(int dir, int pwm) // четвёртый
 
 void readEncoder()
 {
-  for (j=0; j<ENCODERS_COUNT; j++)
+  for (j=0; j<4 ; j++)
   {
    encoderState[j] = digitalRead (encoderPin[j]);
     if (!encoderOldState[j])
