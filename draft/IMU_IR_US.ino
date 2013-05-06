@@ -237,7 +237,12 @@ void loop()
    timestamp_old = timestamp;
    timestamp = millis();
   
-   
+   USdistance = ultrasonic.Ranging(CM);       // get distance
+   if ((USdistance < 1)|(USdistance > 350)) USdistance =350;
+   for(int j=0; j<4; j++ )
+     {
+     IRdistance[j] = 65*pow(analogRead(IRpin[j])*0.0048828125, -1.10);
+     }
      
     Read_Gyro(); // Read gyroscope
     Read_Accel(); // Read accelerometer
