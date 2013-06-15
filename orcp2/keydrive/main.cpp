@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
 #if 1
 
 #if defined(WIN32)
-	char _port[]="COM9";
+	char _port[]="COM11";
 #elif defined(LINUX)
 	char _port[]="/dev/ttyUSB0";
 #endif
@@ -73,6 +73,15 @@ int main(int argc, char* argv[])
 
 	int val=0;
 	int counter=0;
+	
+#if defined(LINUX)
+// Use termios to turn off line buffering
+		termios term;
+		tcgetattr(STDIN_FILENO, &term);
+		term.c_lflag &= ~ICANON;
+		tcsetattr(STDIN_FILENO, TCSANOW, &term);
+		setbuf(stdin, NULL);
+#endif
 
 	while( 1 ) {
 

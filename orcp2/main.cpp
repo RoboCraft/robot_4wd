@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 #if 1
 
 #if defined(WIN32)
-	char _port[]="COM9";
+	char _port[]="COM11";
 #elif defined(LINUX)
 	char _port[]="/dev/ttyUSB0";
 #endif
