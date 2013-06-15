@@ -4,7 +4,8 @@ int j=0; //счётчик в прерывании
 int encoderPin[] = {13, 10, 9, 2}; 
 int encoderCount[] = {0, 0, 0, 0};  
 int encoderState[] = {0, 0, 0, 0};  
-int encoderOldState[] = {0, 0, 0, 0};  
+int encoderOldState[] = {0, 0, 0, 0};
+int dirTag[] = {1, 1, 1, 1};//признак направления
 
 int bumperPin[] = {14, 15, 16, 17}; 
 int bumperState[] = {0, 0, 0, 0}; 
@@ -33,24 +34,28 @@ int spd = 100;
 void motor1(int dir, int pwm) // первый 
 {
   digitalWrite(MOTOR1.in, dir);
+  dirTag[0]=dir;
   analogWrite(MOTOR1.enable, pwm);
 }
 
 void motor2(int dir, int pwm) // второй
 {
   digitalWrite(MOTOR2.in, dir);
+  dirTag[1]=dir;
   analogWrite(MOTOR2.enable, pwm);
 }
 
 void motor3(int dir, int pwm) // третий
 {
   digitalWrite(MOTOR3.in, dir);
+  dirTag[2]=dir;
   analogWrite(MOTOR3.enable, pwm);
 }
 
 void motor4(int dir, int pwm) // четвёртый
 {
   digitalWrite(MOTOR4.in, dir);
+  dirTag[3]=dir;
   analogWrite(MOTOR4.enable, pwm);
 }
 
@@ -62,7 +67,11 @@ void readEncoder()
    encoderState[j] = digitalRead (encoderPin[j]);
     if (!encoderOldState[j])
      {
-      if (encoderState[j]) encoderCount[j]++; 
+      if (encoderState[j]) 
+      {
+         if (dirTag[j]== HIGH) encoderCount[j]++; 
+         if (dirTag[j]== LOW ) encoderCount[j]--; 
+      }
      }
    encoderOldState[j] =  encoderState[j] ;
  }
@@ -125,8 +134,9 @@ void loop() {
   Serial.println ();
   
    Serial.print ("Voltage ");
-   Serial.print (batteryVoltage);
-  Serial.println ();
+   Serial.println (batteryVoltage);
+   
+   Serial.println ();
   
  delay(500);
  

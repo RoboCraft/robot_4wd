@@ -249,17 +249,17 @@ void loop()
     Read_Magn(); // Read magnetometer
                 
         
-        Serial.print("A"); 
+        Serial.print("A "); 
         Serial.print(accel[0]); Serial.print(",");
         Serial.print(accel[1]); Serial.print(",");
         Serial.println(accel[2]); 
       
-        Serial.print("M"); 
+        Serial.print("M "); 
         Serial.print(magnetom[0]); Serial.print(",");
         Serial.print(magnetom[1]); Serial.print(",");
         Serial.println(magnetom[2]);
       
-        Serial.print("G"); 
+        Serial.print("G "); 
         Serial.print(gyro[0]); Serial.print(",");
         Serial.print(gyro[1]); Serial.print(",");
         Serial.println(gyro[2]); 
@@ -278,5 +278,7 @@ void loop()
             Serial.print(" "); 
             Serial.println(IRdistance[j]);  
            }
+           Serial.println(); 
   }
+  
 }
