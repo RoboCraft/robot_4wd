@@ -1,0 +1,20 @@
+# For a direct USB cable connection, the port name is typically
+# /dev/ttyACM# where is # is a number such as 0, 1, 2, etc
+# For a wireless connection like XBee, the port is typically
+# /dev/ttyUSB# where # is a number such as 0, 1, 2, etc.
+
+drive_port: /dev/ttyACM0
+sensor_port: /dev/ttyACM1
+
+#drive_port: /dev/ttyS0
+#sensor_port: /dev/ttyS1
+
+baud: 57600
+
+rate: 50
+
+# === Robot parameters
+#wheel_diameter: ???
+#wheel_track: ???
+#encoder_resolution: ???
+

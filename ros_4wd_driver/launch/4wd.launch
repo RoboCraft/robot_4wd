@@ -1,0 +1,5 @@
+<launch>
+   <node name="robot_4wd_node" pkg="ros_4wd_driver" type="robot_4wd_node" output="screen">
+      <rosparam file="$(find ros_4wd_driver)/config/4wd_params.yaml" command="load" />
+   </node>
+</launch>
