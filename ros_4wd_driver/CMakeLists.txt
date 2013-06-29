@@ -67,22 +67,27 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(include
   ${catkin_INCLUDE_DIRS}
+  include/orcp2
 )
+
+add_definitions(-DLINUX)
 
 ## Declare a cpp library
 # add_library(ros_4wd_driver
 #   src/${PROJECT_NAME}/ros_4wd_driver.cpp
 # )
+add_library(orcp2 STATIC src/orcp2/times.cpp src/orcp2/robot_4wd.cpp src/orcp2/robot_sensors.cpp src/orcp2/orcp2.cpp src/orcp2/serial.cpp src/orcp2/imu.cpp)
 
 ## Declare a cpp executable
 # add_executable(ros_4wd_driver_node src/ros_4wd_driver_node.cpp)
 
 add_executable(robot_4wd_node src/robot_4wd_node.cpp)
-target_link_libraries(robot_4wd_node ${catkin_LIBRARIES})
+target_link_libraries(robot_4wd_node ${catkin_LIBRARIES} orcp2)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(ros_4wd_driver_node ros_4wd_driver_generate_messages_cpp)
+add_dependencies(robot_4wd_node ros_4wd_driver_gencpp)
+add_dependencies(robot_4wd_node orcp2)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(ros_4wd_driver_node

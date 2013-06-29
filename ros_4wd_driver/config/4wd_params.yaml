@@ -3,11 +3,11 @@
 # For a wireless connection like XBee, the port is typically
 # /dev/ttyUSB# where # is a number such as 0, 1, 2, etc.
 
-drive_port: /dev/ttyACM0
-sensor_port: /dev/ttyACM1
+#drive_port: /dev/ttyACM0
+#sensor_port: /dev/ttyACM1
 
-#drive_port: /dev/ttyS0
-#sensor_port: /dev/ttyS1
+drive_port: /dev/ttyS0
+sensor_port: /dev/ttyS1
 
 baud: 57600
 

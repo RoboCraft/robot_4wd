@@ -11,6 +11,12 @@
 #include "ros_4wd_driver/imu_raw_data.h"
 #include "ros_4wd_driver/orcp_string.h"
 
+#include "orcp2/orcp2.h"
+#include "orcp2/serial.h"
+#include "orcp2/times.h"
+#include "orcp2/imu.h"
+#include "orcp2/robot_4wd.h"
+
 #include <string>
 #include <sstream>
 #include <boost/thread.hpp>
@@ -26,6 +32,12 @@ ros::Publisher imu_raw_data_pub;
 std::string drive_serial_name = DEFAULT_DRIVE_SERIAL;
 std::string imu_serial_name = DEFAULT_IMU_SERIAL;
 int serial_rate = DEFAULT_SERIAL_RATE;
+
+Serial drive_serial;
+Serial sensors_serial;
+
+IMU3_data raw_imu_data;
+Robot_4WD robot_data;
 
 void spinThread()
 {
@@ -86,14 +98,48 @@ ROS_INFO("Load param: baud");
   ROS_INFO("sensor_port: %s", imu_serial_name.c_str());
   ROS_INFO("baud: %d", serial_rate);
   
+  ROS_INFO("Open ports");
+  if( drive_serial.open(drive_serial_name.c_str(), serial_rate) ) {
+		ROS_ERROR("Cant open port: %s:%d", drive_serial_name.c_str(), serial_rate);
+		return -1;
+	}
+	
+#if 1
+	int res = 0;
+	TBuff<uint8_t> buff;
+	orcp2::packet pkt;
+	
+	buff.resize(2048);
+	pkt.message.resize(256);
+
+	if(!buff.data || !pkt.message.data) {
+		ROS_ERROR("[!] Error: cant allocate memory!\n");
+		drive_serial.close();
+		return -1;
+	}
+
+	#if 1
+	orcp2::ORCP2 orcp(drive_serial);
+
+	for(int i=0; i<7; i++) {
+		int val = i%2;
+		printf("%d\n", val);
+		orcp.digitalWrite(13, val);
+		orv::time::sleep(500);
+	}
+	#endif
+#endif	
+  
   while (ros::ok()) {
 	ros::spinOnce();
   }
   
+  drive_serial.close();
+  sensors_serial.close();
   ROS_INFO("End");
   
   //spin_thread.join();
-  /**
+#if 0
   ros::Rate loop_rate(50);
 
   int count = 0;
@@ -117,7 +163,7 @@ ROS_INFO("Load param: baud");
     loop_rate.sleep();
     ++count;
   }
-  /**/
+#endif
   
 
 
