@@ -1,0 +1,18 @@
+
+
+0. install OS
+Ubuntu 12.04 LTS
+
+user: user
+pswd: 1
+
+1. install 
+make cmake g++ mc openssh-server
+
+2. network
+static IP: 192.168.0.4
+
+3.
+# add user to group dialout (to work with /dev/ttyUSB0 (Arduino))
+sudo usermod -a -G dialout user
+
