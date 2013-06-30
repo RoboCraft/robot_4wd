@@ -63,9 +63,9 @@ int main(int argc, char **argv)
     setbuf(stdin, NULL);
 #endif
 
-    printf("Reading from keyboard\n");
-    printf("---------------------------\n");
-    printf("Use WASD keys to move the robot and ESC for quit.\n");
+    printf("[i] Reading from keyboard\n");
+    printf("[i] ---------------------------\n");
+    printf("[i] Use WASD keys to move the robot, SPACE for stop and ESC for quit.\n");
 
     while (ros::ok()) {
         int key = console::waitKey(30);

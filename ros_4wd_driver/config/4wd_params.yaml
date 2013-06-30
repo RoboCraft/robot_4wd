@@ -14,6 +14,7 @@ baud: 57600
 rate: 50
 
 # === Robot parameters
-#wheel_diameter: ???
-#wheel_track: ???
-#encoder_resolution: ???
+wheel_diameter: 0.0685
+wheel_track: 0.2152
+gear_reduction: 75
+encoder_resolution: 5

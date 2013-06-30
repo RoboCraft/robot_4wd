@@ -21,6 +21,9 @@
 #include "orcp2/imu.h"
 #include "orcp2/robot_4wd.h"
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 #include <string>
 #include <limits>
 #include <boost/thread.hpp>
@@ -48,6 +51,13 @@ boost::mutex sensors_serial_write;
 
 IMU3_data raw_imu_data;
 Robot_4WD robot_data;
+
+double wheel_diameter = 0.0685;
+double wheel_track = 0.2152;
+double gear_reduction = 75;
+double encoder_resolution = 5;
+double ticks_per_meter;
+double speed_koef = 10;
 
 volatile bool global_stop = false;
 
@@ -235,7 +245,7 @@ void drive_thread()
     }
 
     while (!global_stop) {
-       process_serial(drive_serial, buff, pkt);
+        process_serial(drive_serial, buff, pkt);
     }
 }
 
@@ -258,24 +268,44 @@ void sensors_thread()
     }
 
     while (!global_stop) {
-       process_serial(sensors_serial, buff, pkt);
+        process_serial(sensors_serial, buff, pkt);
     }
 }
 
 void cmd_vel_received(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 {
     //roomba->drive(cmd_vel->linear.x, cmd_vel->angular.z);
-    double linear_speed = cmd_vel->linear.x;
-    double angular_speed = cmd_vel->angular.z;
+    double linear_speed = cmd_vel->linear.x; // m/s
+    double angular_speed = cmd_vel->angular.z; // rad/s
     ROS_INFO("Velocity received: %.2f %.2f", linear_speed, angular_speed);
 
-    //int left_speed_mm_s = (int)((linear_speed-ROOMBA_AXLE_LENGTH*angular_speed/2)*1e3);		// Left wheel velocity in mm/s
-    //int right_speed_mm_s = (int)((linear_speed+ROOMBA_AXLE_LENGTH*angular_speed/2)*1e3);	// Right wheel velocity in mm/s
+    //int left_speed_mm_s = (int)((linear_speed-ROBOT_AXLE_LENGTH*angular_speed/2)*1e3);		// Left wheel velocity in mm/s
+    //int right_speed_mm_s = (int)((linear_speed+ROBOT_AXLE_LENGTH*angular_speed/2)*1e3);	// Right wheel velocity in mm/s
 
     orcp2::ORCP2 orcp(drive_serial);
 
     drive_serial_write.lock();
-    orcp.motorsWrite(linear_speed*100);
+
+    if( linear_speed <  std::numeric_limits<double>::epsilon() &&
+            linear_speed > -std::numeric_limits<double>::epsilon() ) {
+        // zero linear speed - turn in place
+        uint16_t speed = speed_koef * angular_speed * wheel_track  * gear_reduction / 2.0;
+        orcp.drive_4wd(-speed, speed, -speed, speed);
+    }
+    else if( angular_speed <  std::numeric_limits<double>::epsilon() &&
+             angular_speed > -std::numeric_limits<double>::epsilon() ) {
+        // zero angular speed - pure forward/backward motion
+        orcp.motorsWrite(speed_koef * linear_speed * wheel_track  * gear_reduction / 2.0);
+    }
+    else {
+        // Rotation about a point in space
+        //$TODO
+        uint16_t left = speed_koef * linear_speed - angular_speed * wheel_track  * gear_reduction / 2.0;
+        uint16_t right = speed_koef * linear_speed + angular_speed * wheel_track  * gear_reduction / 2.0;
+
+        orcp.drive_4wd(left, right, left, right);
+    }
+
     drive_serial_write.unlock();
 }
 
@@ -307,10 +337,17 @@ int main(int argc, char **argv)
         ROS_INFO("Load param: baud");
         n.getParam("/robot_4wd_node/baud", serial_rate);
     }
+    n.param("/robot_4wd_node/wheel_diameter", wheel_diameter, wheel_diameter);
+    n.param("/robot_4wd_node/wheel_track", wheel_track, wheel_track);
+    n.param("/robot_4wd_node/gear_reduction", gear_reduction, gear_reduction);
+    n.param("/robot_4wd_node/encoder_resolution", encoder_resolution, encoder_resolution);
+
+    ticks_per_meter = encoder_resolution * gear_reduction  / (wheel_diameter * M_PI);
 
     ROS_INFO("drive_port: %s", drive_serial_name.c_str());
     ROS_INFO("sensor_port: %s", sensors_serial_name.c_str());
     ROS_INFO("baud: %d", serial_rate);
+    ROS_INFO("ticks_per_meter: %.2f", ticks_per_meter);
 
     ROS_INFO("Open ports");
     if( drive_serial.open(drive_serial_name.c_str(), serial_rate) ) {
