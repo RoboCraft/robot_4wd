@@ -51,9 +51,119 @@ Robot_4WD robot_data;
 
 volatile bool global_stop = false;
 
-void drive_thread()
+void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
 {
     int res = 0;
+
+    if(!buff.data || !pkt.message.data) {
+        ROS_ERROR("[!] Error: no memory!\n");
+        return ;
+    }
+
+    ros_4wd_driver::drive_telemetry_4wd drive;
+
+    if( res = serial.waitInput(500) ) {
+        //printf("[i] waitInput: %d\n", res);
+        if( (res = serial.available()) > 0 ) {
+            //printf("[i] available: %d\n", res);
+            //res = res > (buff.real_size-buff.size) ? (buff.real_size-buff.size) : res ;
+            if( (res = serial.read(buff.data+buff.size, buff.real_size-buff.size)) > 0 ) {
+                buff.size += res;
+
+                // get packet from data
+                while ( (res = orcp2::get_packet(buff.data, buff.size, &pkt)) > 0) {
+                    //     ROS_INFO("[i] res: %02d message: %04X size: %04d CRC: %02X buff.size: %02d\n",
+                    //              res, pkt.message_type, pkt.message_size, pkt.checksum, buff.size);
+
+                    uint8_t crc = pkt.calc_checksum();
+                    if(crc == pkt.checksum) {
+                        //         ROS_INFO("[i] Good message CRC: %02X\n", pkt.checksum);
+
+                        switch(pkt.message_type) {
+                        case ORCP2_SEND_STRING:
+                            pkt.message.data[pkt.message.size]=0;
+                            ROS_INFO("[i] String: %s\n", pkt.message.data);
+                            //printf("[i] counter: %d\n", counter);
+#if 0
+                            if(++counter > 50) {
+                                //printf("[i] digitalWrite: %d\n", val);
+                                val = !val;
+                                orcp.digitalWrite(13, val);
+                                counter = 0;
+                            }
+#endif
+                            break;
+                        case ORCP2_MESSAGE_IMU_RAW_DATA:
+                            deserialize_imu3_data(pkt.message.data, pkt.message.size, &raw_imu_data);
+                            ROS_INFO( "[i] IMU: acc: [%d %d %d] mag: [%d %d %d] gyro: [%d %d %d]\n",
+                                      raw_imu_data.Accelerometer[0], raw_imu_data.Accelerometer[1], raw_imu_data.Accelerometer[2],
+                                      raw_imu_data.Magnetometer[0], raw_imu_data.Magnetometer[1], raw_imu_data.Magnetometer[2],
+                                      raw_imu_data.Gyro[0], raw_imu_data.Gyro[1], raw_imu_data.Gyro[2] );
+                            break;
+                        case ORCP2_MESSAGE_ROBOT_4WD_DRIVE_TELEMETRY:
+                            deserialize_robot_4wd_drive_part(pkt.message.data, pkt.message.size, &robot_data);
+                            ROS_INFO( "[i] Drive telemetry: bmp: %d enc: [%d %d %d %d] PWM: [%d %d %d %d]\n",
+                                      robot_data.Bamper,
+                                      robot_data.Encoder[0], robot_data.Encoder[1], robot_data.Encoder[2], robot_data.Encoder[3],
+                                      robot_data.PWM[0], robot_data.PWM[1], robot_data.PWM[2], robot_data.PWM[3] );
+
+                            drive.bamper = robot_data.Bamper;
+                            drive.encoder1 = robot_data.Encoder[0];
+                            drive.encoder2 = robot_data.Encoder[1];
+                            drive.encoder3 = robot_data.Encoder[2];
+                            drive.encoder4 = robot_data.Encoder[3];
+                            drive.pwm1 = robot_data.PWM[0];
+                            drive.pwm2 = robot_data.PWM[1];
+                            drive.pwm3 = robot_data.PWM[2];
+                            drive.pwm4 = robot_data.PWM[3];
+
+                            drive_telemetry_pub.publish(drive);
+                            break;
+                        case ORCP2_MESSAGE_ROBOT_4WD_SENSORS_TELEMETRY:
+                            deserialize_robot_4wd_sensors_part(pkt.message.data, pkt.message.size, &robot_data);
+                            ROS_INFO( "[i] Sensors telemetry: US: %d IR: [%d %d %d %d] V: %d\n",
+                                      robot_data.US[0],
+                                      robot_data.IR[0], robot_data.IR[1], robot_data.IR[2], robot_data.IR[3],
+                                      robot_data.Voltage );
+                            break;
+                        case ORCP2_MESSAGE_ROBOT_4WD_TELEMETRY:
+                            deserialize_robot_4wd(pkt.message.data, pkt.message.size, &robot_data);
+                            ROS_INFO( "[i] Drive Telemetry: bmp: %d enc: [%d %d %d %d] PWM: [%d %d %d %d]\n",
+                                      robot_data.Bamper,
+                                      robot_data.Encoder[0], robot_data.Encoder[1], robot_data.Encoder[2], robot_data.Encoder[3],
+                                      robot_data.PWM[0], robot_data.PWM[1], robot_data.PWM[2], robot_data.PWM[3] );
+                            ROS_INFO( "[i] Sensors Telemetry: US: %d IR: [%d %d %d %d] V: %d\n",
+                                      robot_data.US[0],
+                                      robot_data.IR[0], robot_data.IR[1], robot_data.IR[2], robot_data.IR[3],
+                                      robot_data.Voltage );
+                            break;
+                        default:
+                            ROS_INFO("[i] Unknown message type: %04X!\n", pkt.message_type);
+                            break;
+                        }
+                    }
+                    else {
+                        ROS_WARN("[!] Bad message CRC: %02X vs: %02X\n", crc, pkt.checksum);
+                    }
+                }
+            }
+            else {
+                ROS_WARN("[!] too much data: %d (%d)\n", res, buff.size);
+                buff.size = 0;
+            }
+        }
+        else {
+            ROS_INFO("[!] no available: %d\n", res);
+        }
+    }
+    else {
+        ROS_INFO("[!] waitInput timeout: %d\n", res);
+    }
+
+}
+
+void drive_thread()
+{
     TBuff<uint8_t> buff;
     orcp2::packet pkt;
 
@@ -65,119 +175,9 @@ void drive_thread()
         return ;
     }
 
-    orcp2::ORCP2 orcp(drive_serial);
-
-    int val=0;
-    int counter=0;
-    std::stringstream ss;
-
     while (!global_stop) {
-        ros_4wd_driver::drive_telemetry_4wd drive;
-
-        if( res = drive_serial.waitInput(500) ) {
-            //printf("[i] waitInput: %d\n", res);
-            if( (res = drive_serial.available()) > 0 ) {
-                //printf("[i] available: %d\n", res);
-                //res = res > (buff.real_size-buff.size) ? (buff.real_size-buff.size) : res ;
-                if( (res = drive_serial.read(buff.data+buff.size, buff.real_size-buff.size)) > 0 ) {
-                    buff.size += res;
-
-                    // get packet from data
-                    while ( (res = orcp2::get_packet(buff.data, buff.size, &pkt)) > 0) {
-                   //     ROS_INFO("[i] res: %02d message: %04X size: %04d CRC: %02X buff.size: %02d\n",
-                   //              res, pkt.message_type, pkt.message_size, pkt.checksum, buff.size);
-
-                        uint8_t crc = pkt.calc_checksum();
-                        if(crc == pkt.checksum) {
-                   //         ROS_INFO("[i] Good message CRC: %02X\n", pkt.checksum);
-
-                            switch(pkt.message_type) {
-                            case ORCP2_SEND_STRING:
-                                pkt.message.data[pkt.message.size]=0;
-                                ROS_INFO("[i] String: %s\n", pkt.message.data);
-                                //printf("[i] counter: %d\n", counter);
-#if 0
-                                if(++counter > 50) {
-                                    //printf("[i] digitalWrite: %d\n", val);
-                                    val = !val;
-                                    orcp.digitalWrite(13, val);
-                                    counter = 0;
-                                }
-#endif
-                                break;
-                            case ORCP2_MESSAGE_IMU_RAW_DATA:
-                                deserialize_imu3_data(pkt.message.data, pkt.message.size, &raw_imu_data);
-                                ROS_INFO( "[i] IMU: acc: [%d %d %d] mag: [%d %d %d] gyro: [%d %d %d]\n",
-                                          raw_imu_data.Accelerometer[0], raw_imu_data.Accelerometer[1], raw_imu_data.Accelerometer[2],
-                                          raw_imu_data.Magnetometer[0], raw_imu_data.Magnetometer[1], raw_imu_data.Magnetometer[2],
-                                          raw_imu_data.Gyro[0], raw_imu_data.Gyro[1], raw_imu_data.Gyro[2] );
-                                break;
-                            case ORCP2_MESSAGE_ROBOT_4WD_DRIVE_TELEMETRY:
-                                deserialize_robot_4wd_drive_part(pkt.message.data, pkt.message.size, &robot_data);
-                                ROS_INFO( "[i] Drive telemetry: bmp: %d enc: [%d %d %d %d] PWM: [%d %d %d %d]\n",
-                                          robot_data.Bamper,
-                                          robot_data.Encoder[0], robot_data.Encoder[1], robot_data.Encoder[2], robot_data.Encoder[3],
-                                          robot_data.PWM[0], robot_data.PWM[1], robot_data.PWM[2], robot_data.PWM[3] );
-
-                                drive.bamper = robot_data.Bamper;
-                                drive.encoder1 = robot_data.Encoder[0];
-                                drive.encoder2 = robot_data.Encoder[1];
-                                drive.encoder3 = robot_data.Encoder[2];
-                                drive.encoder4 = robot_data.Encoder[3];
-                                drive.pwm1 = robot_data.PWM[0];
-                                drive.pwm2 = robot_data.PWM[1];
-                                drive.pwm3 = robot_data.PWM[2];
-                                drive.pwm4 = robot_data.PWM[3];
-
-                        //        ss << "[i][DRIVE][" << counter << "] bamper "<<drive.bamper
-                        //           << "encoders " << drive.encoder1 << " " << drive.encoder2 << " " << drive.encoder3 << " " << drive.encoder4
-                        //           << "pwm " << drive.pwm1 << " " << drive.pwm2 << " " << drive.pwm3 << " " << drive.pwm4;
-
-                        //        ROS_INFO("%s", ss.str().c_str());
-
-                                drive_telemetry_pub.publish(drive);
-                                break;
-                            case ORCP2_MESSAGE_ROBOT_4WD_SENSORS_TELEMETRY:
-                                deserialize_robot_4wd_sensors_part(pkt.message.data, pkt.message.size, &robot_data);
-                                ROS_INFO( "[i] Sensors telemetry: US: %d IR: [%d %d %d %d] V: %d\n",
-                                          robot_data.US[0],
-                                          robot_data.IR[0], robot_data.IR[1], robot_data.IR[2], robot_data.IR[3],
-                                          robot_data.Voltage );
-                                break;
-                            case ORCP2_MESSAGE_ROBOT_4WD_TELEMETRY:
-                                deserialize_robot_4wd(pkt.message.data, pkt.message.size, &robot_data);
-                                ROS_INFO( "[i] Drive Telemetry: bmp: %d enc: [%d %d %d %d] PWM: [%d %d %d %d]\n",
-                                          robot_data.Bamper,
-                                          robot_data.Encoder[0], robot_data.Encoder[1], robot_data.Encoder[2], robot_data.Encoder[3],
-                                          robot_data.PWM[0], robot_data.PWM[1], robot_data.PWM[2], robot_data.PWM[3] );
-                                ROS_INFO( "[i] Sensors Telemetry: US: %d IR: [%d %d %d %d] V: %d\n",
-                                          robot_data.US[0],
-                                          robot_data.IR[0], robot_data.IR[1], robot_data.IR[2], robot_data.IR[3],
-                                          robot_data.Voltage );
-                                break;
-                            default:
-                                ROS_INFO("[i] Unknown message type: %04X!\n", pkt.message_type);
-                                break;
-                            }
-                        }
-                        else {
-                            ROS_WARN("[!] Bad message CRC: %02X vs: %02X\n", crc, pkt.checksum);
-                        }
-                    }
-                }
-                else {
-                    ROS_WARN("[!] too much data: %d (%d)\n", res, buff.size);
-                    buff.size = 0;
-                }
-            }
-            else {
-                ROS_INFO("[!] no available: %d\n", res);
-            }
-        }
-        else {
-            ROS_INFO("[!] waitInput timeout: %d\n", res);
-        }
-    } //while (!global_stop) {
+       process_serial(drive_serial, buff, pkt);
+    }
 }
 
 void cmd_vel_received(const geometry_msgs::Twist::ConstPtr& cmd_vel)
@@ -231,20 +231,6 @@ int main(int argc, char **argv)
     }
 
 #if 0
-    int res = 0;
-    TBuff<uint8_t> buff;
-    orcp2::packet pkt;
-
-    buff.resize(2048);
-    pkt.message.resize(256);
-
-    if(!buff.data || !pkt.message.data) {
-        ROS_ERROR("[!] Error: cant allocate memory!\n");
-        drive_serial.close();
-        return -1;
-    }
-
-#if 1
     orcp2::ORCP2 orcp(drive_serial);
 
     for(int i=0; i<7; i++) {
@@ -254,7 +240,6 @@ int main(int argc, char **argv)
         orv::time::sleep(500);
     }
 #endif
-#endif	
 
     boost::thread drv_thread(&drive_thread);
 
@@ -269,34 +254,6 @@ int main(int argc, char **argv)
     drive_serial.close();
     sensors_serial.close();
     ROS_INFO("End");
-
-#if 0
-    ros::Rate loop_rate(50);
-
-    int count = 0;
-    while (ros::ok())
-    {
-        ros_4wd_driver::drive_telemetry_4wd drive;
-        ros_4wd_driver::sensors_telemetry_4wd sensors;
-        ros_4wd_driver::imu_raw_data imuraw;
-
-        std::stringstream ss;
-        ss << "[i][DRIVE][" << count << "] bamper "<<drive.bamper
-           << "encoders " << drive.encoder1 << " " << drive.encoder2 << " " << drive.encoder3 << " " << drive.encoder4
-           << "pwm " << drive.pwm1 << " " << drive.pwm2 << " " << drive.pwm3 << " " << drive.pwm4;
-
-        ROS_INFO("%s", ss.str().c_str());
-
-        drive_telemetry_pub.publish(drive);
-
-        ros::spinOnce();
-
-        loop_rate.sleep();
-        ++count;
-    }
-#endif
-
-
 
     return 0;
 }
