@@ -61,6 +61,8 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
     }
 
     ros_4wd_driver::drive_telemetry_4wd drive;
+    ros_4wd_driver::sensors_telemetry_4wd sensors;
+    ros_4wd_driver::imu_raw_data imu;
 
     if( res = serial.waitInput(500) ) {
         //printf("[i] waitInput: %d\n", res);
@@ -99,6 +101,18 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                                       raw_imu_data.Accelerometer[0], raw_imu_data.Accelerometer[1], raw_imu_data.Accelerometer[2],
                                       raw_imu_data.Magnetometer[0], raw_imu_data.Magnetometer[1], raw_imu_data.Magnetometer[2],
                                       raw_imu_data.Gyro[0], raw_imu_data.Gyro[1], raw_imu_data.Gyro[2] );
+
+                            imu.accelerometer1 = raw_imu_data.Accelerometer[0];
+                            imu.accelerometer2 = raw_imu_data.Accelerometer[1];
+                            imu.accelerometer3 = raw_imu_data.Accelerometer[2];
+                            imu.magnetometer1 = raw_imu_data.Magnetometer[0];
+                            imu.magnetometer2 = raw_imu_data.Magnetometer[1];
+                            imu.magnetometer3 = raw_imu_data.Magnetometer[2];
+                            imu.gyro1 = raw_imu_data.Gyro[0];
+                            imu.gyro2 = raw_imu_data.Gyro[1];
+                            imu.gyro3 = raw_imu_data.Gyro[2];
+
+                            imu_raw_data_pub.publish(imu);
                             break;
                         case ORCP2_MESSAGE_ROBOT_4WD_DRIVE_TELEMETRY:
                             deserialize_robot_4wd_drive_part(pkt.message.data, pkt.message.size, &robot_data);
@@ -125,6 +139,15 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                                       robot_data.US[0],
                                       robot_data.IR[0], robot_data.IR[1], robot_data.IR[2], robot_data.IR[3],
                                       robot_data.Voltage );
+
+                            sensors.us = robot_data.US[0];
+                            sensors.ir1 = robot_data.IR[0];
+                            sensors.ir2 = robot_data.IR[1];
+                            sensors.ir3 = robot_data.IR[2];
+                            sensors.ir4 = robot_data.IR[3];
+                            sensors.voltage = robot_data.Voltage;
+
+                            sensors_telemetry_pub.publish(sensors);
                             break;
                         case ORCP2_MESSAGE_ROBOT_4WD_TELEMETRY:
                             deserialize_robot_4wd(pkt.message.data, pkt.message.size, &robot_data);
@@ -132,10 +155,32 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                                       robot_data.Bamper,
                                       robot_data.Encoder[0], robot_data.Encoder[1], robot_data.Encoder[2], robot_data.Encoder[3],
                                       robot_data.PWM[0], robot_data.PWM[1], robot_data.PWM[2], robot_data.PWM[3] );
+
+                            drive.bamper = robot_data.Bamper;
+                            drive.encoder1 = robot_data.Encoder[0];
+                            drive.encoder2 = robot_data.Encoder[1];
+                            drive.encoder3 = robot_data.Encoder[2];
+                            drive.encoder4 = robot_data.Encoder[3];
+                            drive.pwm1 = robot_data.PWM[0];
+                            drive.pwm2 = robot_data.PWM[1];
+                            drive.pwm3 = robot_data.PWM[2];
+                            drive.pwm4 = robot_data.PWM[3];
+
+                            drive_telemetry_pub.publish(drive);
+
                             ROS_INFO( "[i] Sensors Telemetry: US: %d IR: [%d %d %d %d] V: %d\n",
                                       robot_data.US[0],
                                       robot_data.IR[0], robot_data.IR[1], robot_data.IR[2], robot_data.IR[3],
                                       robot_data.Voltage );
+
+                            sensors.us = robot_data.US[0];
+                            sensors.ir1 = robot_data.IR[0];
+                            sensors.ir2 = robot_data.IR[1];
+                            sensors.ir3 = robot_data.IR[2];
+                            sensors.ir4 = robot_data.IR[3];
+                            sensors.voltage = robot_data.Voltage;
+
+                            sensors_telemetry_pub.publish(sensors);
                             break;
                         default:
                             ROS_INFO("[i] Unknown message type: %04X!\n", pkt.message_type);
