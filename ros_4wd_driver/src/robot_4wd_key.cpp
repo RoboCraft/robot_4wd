@@ -53,59 +53,69 @@ int main(int argc, char **argv)
 
 #if defined(LINUX)
     // Use termios to turn off line buffering
-    termios term;
+    termios term, cooked;
     tcgetattr(STDIN_FILENO, &term);
-    term.c_lflag &= ~ICANON;
+    memcpy(&cooked, &term, sizeof(term));
+    term.c_lflag &= ~(ICANON | ECHO);
+    term.c_cc[VEOL] = 1;
+    term.c_cc[VEOF] = 2;
     tcsetattr(STDIN_FILENO, TCSANOW, &term);
     setbuf(stdin, NULL);
 #endif
 
     printf("Reading from keyboard\n");
     printf("---------------------------\n");
-    printf("Use WASD or arrow keys to move the robott.\n");
+    printf("Use WASD keys to move the robot and ESC for quit.\n");
 
     while (ros::ok()) {
         int key = console::waitKey(30);
-        if(key != 0 ) ROS_DEBUG( "[i] Key: %c (%d)\n", key ,key );
+        if(key != 0 )  {
+            ROS_DEBUG( "[i] Key: %c (0x%X)\n", key, key);
+        }
         if(key == KEYCODE_ESC) { //ESC
+            ROS_DEBUG("Exit");
             linear = angular = 0;
-            publish(linear, angular);
+            publish(angular, linear);
             break;
         }
         else if(key == KEYCODE_SPACE) { // SPACE
             linear = angular = 0;
             ROS_DEBUG("[i] stop\n");
-            publish(linear, angular);
+            publish(angular, linear);
         }
-        else if(key == 'w' || key == 'W' || key == KEYCODE_U) {
+        else if(key == 'w' || key == 'W') {
             linear = 1.0;
             angular = 0;
             ROS_DEBUG("[i] forward %.2f %.2f", linear, angular);
-            publish(linear, angular);
+            publish(angular, linear);
         }
-        else if(key == 's' || key == 'S' || key == KEYCODE_D) {
+        else if(key == 's' || key == 'S') {
             linear = -1.0;
             angular = 0;
             ROS_DEBUG("[i] backward %.2f %.2f", linear, angular);
-            publish(linear, angular);
+            publish(angular, linear);
         }
-        else if(key == 'a' || key == 'A' || key == KEYCODE_L) {
+        else if(key == 'a' || key == 'A') {
             linear = 0;
             angular = 1.0;
             ROS_DEBUG("[i] left %.2f %.2f", linear, angular);
 
-            publish(linear, angular);
+            publish(angular, linear);
         }
-        else if(key == 'd' || key == 'D' || key == KEYCODE_R) {
+        else if(key == 'd' || key == 'D') {
             linear = 0;
             angular = -1.0;
             ROS_DEBUG("[i] right %.2f %.2f", linear, angular);
 
-            publish(linear, angular);
+            publish(angular, linear);
         }
     }
 
     ROS_INFO("End");
+
+#if defined(LINUX)
+    tcsetattr(STDIN_FILENO, TCSANOW, &cooked);
+#endif
 
     return 0;
 }
