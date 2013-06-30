@@ -30,3 +30,25 @@ ros_4wd_driver\config\4wd_params.yaml
 set names:
 drive_port: /dev/ttyUSB0
 sensor_port: /dev/ttyUSB1
+
+
+
+5. Execution
+
+in different terminals
+
+5.1
+roscore
+
+5.2
+cd catkin_ws
+source devel/setup.bash
+roslaunch ros_4wd_driver 4wd.launch
+
+5.3
+cd catkin_ws
+source devel/setup.bash
+rosrun ros_4wd_driver robot_4wd_key
+
+
+
