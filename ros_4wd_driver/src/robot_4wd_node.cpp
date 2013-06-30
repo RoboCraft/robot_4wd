@@ -26,7 +26,7 @@
 #include <boost/thread.hpp>
 
 #define DEFAULT_DRIVE_SERIAL "/dev/ttyS0"
-#define DEFAULT_IMU_SERIAL "/dev/ttyS1"
+#define DEFAULT_SENSORS_SERIAL "/dev/ttyS1"
 #define DEFAULT_SERIAL_RATE 57600
 
 ros::Publisher drive_telemetry_pub;
@@ -37,7 +37,7 @@ ros::Publisher odom_pub;
 ros::Subscriber cmd_vel_sub;
 
 std::string drive_serial_name = DEFAULT_DRIVE_SERIAL;
-std::string imu_serial_name = DEFAULT_IMU_SERIAL;
+std::string sensors_serial_name = DEFAULT_SENSORS_SERIAL;
 int serial_rate = DEFAULT_SERIAL_RATE;
 
 Serial drive_serial;
@@ -60,6 +60,8 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
         return ;
     }
 
+    ros::Time current_time;
+
     ros_4wd_driver::drive_telemetry_4wd drive;
     ros_4wd_driver::sensors_telemetry_4wd sensors;
     ros_4wd_driver::imu_raw_data imu;
@@ -80,6 +82,8 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                     uint8_t crc = pkt.calc_checksum();
                     if(crc == pkt.checksum) {
                         //         ROS_INFO("[i] Good message CRC: %02X\n", pkt.checksum);
+
+                        current_time = ros::Time::now();
 
                         switch(pkt.message_type) {
                         case ORCP2_SEND_STRING:
@@ -102,6 +106,7 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                                       raw_imu_data.Magnetometer[0], raw_imu_data.Magnetometer[1], raw_imu_data.Magnetometer[2],
                                       raw_imu_data.Gyro[0], raw_imu_data.Gyro[1], raw_imu_data.Gyro[2] );
 
+                            imu.header.stamp = current_time;
                             imu.accelerometer1 = raw_imu_data.Accelerometer[0];
                             imu.accelerometer2 = raw_imu_data.Accelerometer[1];
                             imu.accelerometer3 = raw_imu_data.Accelerometer[2];
@@ -121,6 +126,7 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                                       robot_data.Encoder[0], robot_data.Encoder[1], robot_data.Encoder[2], robot_data.Encoder[3],
                                       robot_data.PWM[0], robot_data.PWM[1], robot_data.PWM[2], robot_data.PWM[3] );
 
+                            drive.header.stamp = current_time;
                             drive.bamper = robot_data.Bamper;
                             drive.encoder1 = robot_data.Encoder[0];
                             drive.encoder2 = robot_data.Encoder[1];
@@ -140,6 +146,7 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                                       robot_data.IR[0], robot_data.IR[1], robot_data.IR[2], robot_data.IR[3],
                                       robot_data.Voltage );
 
+                            sensors.header.stamp = current_time;
                             sensors.us = robot_data.US[0];
                             sensors.ir1 = robot_data.IR[0];
                             sensors.ir2 = robot_data.IR[1];
@@ -156,6 +163,7 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                                       robot_data.Encoder[0], robot_data.Encoder[1], robot_data.Encoder[2], robot_data.Encoder[3],
                                       robot_data.PWM[0], robot_data.PWM[1], robot_data.PWM[2], robot_data.PWM[3] );
 
+                            drive.header.stamp = current_time;
                             drive.bamper = robot_data.Bamper;
                             drive.encoder1 = robot_data.Encoder[0];
                             drive.encoder2 = robot_data.Encoder[1];
@@ -173,6 +181,7 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                                       robot_data.IR[0], robot_data.IR[1], robot_data.IR[2], robot_data.IR[3],
                                       robot_data.Voltage );
 
+                            sensors.header.stamp = current_time;
                             sensors.us = robot_data.US[0];
                             sensors.ir1 = robot_data.IR[0];
                             sensors.ir2 = robot_data.IR[1];
@@ -220,8 +229,36 @@ void drive_thread()
         return ;
     }
 
+    if(!drive_serial.connected()) {
+        ROS_WARN("Port not opened!\n");
+        return;
+    }
+
     while (!global_stop) {
        process_serial(drive_serial, buff, pkt);
+    }
+}
+
+void sensors_thread()
+{
+    TBuff<uint8_t> buff;
+    orcp2::packet pkt;
+
+    buff.resize(2048);
+    pkt.message.resize(256);
+
+    if(!buff.data || !pkt.message.data) {
+        ROS_ERROR("[!] Error: cant allocate memory!\n");
+        return ;
+    }
+
+    if(!sensors_serial.connected()) {
+        ROS_WARN("Port not opened!\n");
+        return;
+    }
+
+    while (!global_stop) {
+       process_serial(sensors_serial, buff, pkt);
     }
 }
 
@@ -258,7 +295,7 @@ int main(int argc, char **argv)
     }
     if (n.hasParam("/robot_4wd_node/sensor_port")) {
         ROS_INFO("Load param: sensor_port");
-        n.getParam("/robot_4wd_node/sensor_port", imu_serial_name);
+        n.getParam("/robot_4wd_node/sensor_port", sensors_serial_name);
     }
     if (n.hasParam("/robot_4wd_node/baud")) {
         ROS_INFO("Load param: baud");
@@ -266,13 +303,16 @@ int main(int argc, char **argv)
     }
 
     ROS_INFO("drive_port: %s", drive_serial_name.c_str());
-    ROS_INFO("sensor_port: %s", imu_serial_name.c_str());
+    ROS_INFO("sensor_port: %s", sensors_serial_name.c_str());
     ROS_INFO("baud: %d", serial_rate);
 
     ROS_INFO("Open ports");
     if( drive_serial.open(drive_serial_name.c_str(), serial_rate) ) {
         ROS_ERROR("Cant open port: %s:%d", drive_serial_name.c_str(), serial_rate);
         return -1;
+    }
+    if( sensors_serial.open(sensors_serial_name.c_str(), serial_rate) ) {
+        ROS_WARN("Cant open port: %s:%d", sensors_serial_name.c_str(), serial_rate);
     }
 
 #if 0
@@ -287,6 +327,7 @@ int main(int argc, char **argv)
 #endif
 
     boost::thread drv_thread(&drive_thread);
+    boost::thread snsr_thread(&sensors_thread);
 
     while (ros::ok()) {
         ros::spin();
@@ -295,6 +336,7 @@ int main(int argc, char **argv)
     global_stop = true;
 
     drv_thread.join();
+    snsr_thread.join();
 
     drive_serial.close();
     sensors_serial.close();
