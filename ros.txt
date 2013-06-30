@@ -16,3 +16,17 @@ static IP: 192.168.0.4
 # add user to group dialout (to work with /dev/ttyUSB0 (Arduino))
 sudo usermod -a -G dialout user
 
+
+4. Arduino naming:
+http://robocraft.ru/blog/arduino/2985.html
+
+for example:
+drive controller - ttyUSB0
+sensor controller - ttyUSB1
+
+edit configuration file:
+ros_4wd_driver\config\4wd_params.yaml
+
+set names:
+drive_port: /dev/ttyUSB0
+sensor_port: /dev/ttyUSB1

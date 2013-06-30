@@ -1,4 +1,5 @@
 del .\*.ncb
+del .\*.sdf
 del .\*.suo /A H
 del .\Debug\*.*db
 del .\Debug\*.ilk
