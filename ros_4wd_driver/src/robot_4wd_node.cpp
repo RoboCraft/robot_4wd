@@ -7,6 +7,7 @@
 
 #include "ros/ros.h"
 
+#include "geometry_msgs/Quaternion.h"
 #include "nav_msgs/Odometry.h"				// odom
 #include "geometry_msgs/Twist.h"			// cmd_vel
 
@@ -60,6 +61,74 @@ double ticks_per_meter;
 double speed_koef = 10;
 
 volatile bool global_stop = false;
+
+ros::Time odometry_prev_time;
+int enc_right=0;
+int enc_left=0;
+double odom_x=0, odom_y=0, odom_th=0;
+
+//$TODO
+void calc_odometry(ros_4wd_driver::drive_telemetry_4wd &drive)
+{
+    ros::Time current_time = ros::Time::now();
+
+    ros::Duration dur = current_time - odometry_prev_time;
+    double dt = dur.toNSec()*1e9;
+
+    ROS_INFO("[i] dt: %0.6f s\n", dt);
+
+    double dright = (drive.encoder1 - enc_right) / ticks_per_meter;
+    double dleft = (drive.encoder2 - enc_left) / ticks_per_meter;
+
+    enc_right = drive.encoder1;
+    enc_left = drive.encoder2;
+
+    double dxy_ave = (dright + dleft) / 2.0;
+    double dth = (dright - dleft) / wheel_track;
+    double vxy = dxy_ave / dt;
+    double vth = dth / dt;
+
+    double dx=0, dy=0;
+
+    //dxy_ave != 0
+    if( dxy_ave >  std::numeric_limits<double>::epsilon() &&
+            dxy_ave < -std::numeric_limits<double>::epsilon() ) {
+
+        dx = cos(dth) * dxy_ave;
+        dy = -sin(dth) * dxy_ave;
+        odom_x += (cos(odom_th) * dx - sin(odom_th) * dy);
+        odom_y += (sin(odom_th) * dx + cos(odom_th) * dy);
+    }
+
+    //dth != 0
+    if( dth >  std::numeric_limits<double>::epsilon() &&
+            dth < -std::numeric_limits<double>::epsilon() ) {
+        odom_th += dth;
+    }
+
+    geometry_msgs::Quaternion quaternion;
+    quaternion.x = 0.0;
+    quaternion.y = 0.0;
+    quaternion.z = sin(odom_th / 2.0);
+    quaternion.w = cos(odom_th / 2.0);
+
+    nav_msgs::Odometry odom;
+
+    odom.header.frame_id = "odom";
+    odom.child_frame_id = "base_link";
+    odom.header.stamp = current_time;
+    odom.pose.pose.position.x = odom_x;
+    odom.pose.pose.position.y = odom_y;
+    odom.pose.pose.position.z = 0;
+    odom.pose.pose.orientation = quaternion;
+    odom.twist.twist.linear.x = vxy;
+    odom.twist.twist.linear.y = 0;
+    odom.twist.twist.angular.z = vth;
+
+    odom_pub.publish(odom);
+
+    odometry_prev_time = current_time;
+}
 
 void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
 {
@@ -148,6 +217,7 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                             drive.pwm4 = robot_data.PWM[3];
 
                             drive_telemetry_pub.publish(drive);
+                            calc_odometry(drive);
                             break;
                         case ORCP2_MESSAGE_ROBOT_4WD_SENSORS_TELEMETRY:
                             deserialize_robot_4wd_sensors_part(pkt.message.data, pkt.message.size, &robot_data);
@@ -185,6 +255,7 @@ void process_serial(Serial &serial, TBuff<uint8_t> &buff, orcp2::packet &pkt)
                             drive.pwm4 = robot_data.PWM[3];
 
                             drive_telemetry_pub.publish(drive);
+                            calc_odometry(drive);
 
                             ROS_INFO( "[i] Sensors Telemetry: US: %d IR: [%d %d %d %d] V: %d\n",
                                       robot_data.US[0],
