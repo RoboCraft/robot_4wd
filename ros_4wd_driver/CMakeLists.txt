@@ -76,7 +76,7 @@ add_definitions(-DLINUX)
 # add_library(ros_4wd_driver
 #   src/${PROJECT_NAME}/ros_4wd_driver.cpp
 # )
-add_library(orcp2 STATIC src/orcp2/times.cpp src/orcp2/robot_4wd.cpp src/orcp2/robot_sensors.cpp src/orcp2/orcp2.cpp src/orcp2/serial.cpp src/orcp2/imu.cpp)
+add_library(orcp2 STATIC src/orcp2/times.cpp src/orcp2/robot_4wd.cpp src/orcp2/robot_sensors.cpp src/orcp2/orcp2.cpp src/orcp2/serial.cpp src/orcp2/imu.cpp src/orcp2/console.cpp)
 
 ## Declare a cpp executable
 # add_executable(ros_4wd_driver_node src/ros_4wd_driver_node.cpp)
@@ -84,10 +84,15 @@ add_library(orcp2 STATIC src/orcp2/times.cpp src/orcp2/robot_4wd.cpp src/orcp2/r
 add_executable(robot_4wd_node src/robot_4wd_node.cpp)
 target_link_libraries(robot_4wd_node ${catkin_LIBRARIES} orcp2)
 
+add_executable(robot_4wd_key src/robot_4wd_key.cpp)
+target_link_libraries(robot_4wd_key ${catkin_LIBRARIES} orcp2)
+
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 add_dependencies(robot_4wd_node ros_4wd_driver_gencpp)
 add_dependencies(robot_4wd_node orcp2)
+
+add_dependencies(robot_4wd_key orcp2)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(ros_4wd_driver_node

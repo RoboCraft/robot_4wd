@@ -22,7 +22,7 @@
 #include "orcp2/robot_4wd.h"
 
 #include <string>
-#include <sstream>
+#include <limits>
 #include <boost/thread.hpp>
 
 #define DEFAULT_DRIVE_SERIAL "/dev/ttyS0"
@@ -271,6 +271,12 @@ void cmd_vel_received(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 
     //int left_speed_mm_s = (int)((linear_speed-ROOMBA_AXLE_LENGTH*angular_speed/2)*1e3);		// Left wheel velocity in mm/s
     //int right_speed_mm_s = (int)((linear_speed+ROOMBA_AXLE_LENGTH*angular_speed/2)*1e3);	// Right wheel velocity in mm/s
+
+    orcp2::ORCP2 orcp(drive_serial);
+
+    drive_serial_write.lock();
+    orcp.motorsWrite(linear_speed*100);
+    drive_serial_write.unlock();
 }
 
 int main(int argc, char **argv)
