@@ -1,0 +1,2 @@
+BUS=="usb", SYSFS{idProduct}=="6001", SYSFS{idVendor}=="0403", SYSFS{serial}=="AH01CF3F", NAME="arduinoMotors"
+BUS=="usb", SYSFS{idProduct}=="6001", SYSFS{idVendor}=="0403", SYSFS{serial}=="A50059J4", NAME="arduinoSensors"
