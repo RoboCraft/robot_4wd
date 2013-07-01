@@ -1,2 +1,2 @@
-SUBSYSTEMS=="usb", SYSFS{idProduct}=="6001", SYSFS{idVendor}=="0403", SYSFS{serial}=="AH01CF3F", NAME="arduinoMotors"
-SUBSYSTEMS=="usb", SYSFS{idProduct}=="6001", SYSFS{idVendor}=="0403", SYSFS{serial}=="A50059J4", NAME="arduinoSensors"
+SUBSYSTEMS=="usb", ATTRS{idProduct}=="6001", ATTRS{idVendor}=="0403", ATTRS{serial}=="AH01CF3F", NAME="arduinoMotors"
+SUBSYSTEMS=="usb", ATTRS{idProduct}=="6001", ATTRS{idVendor}=="0403", ATTRS{serial}=="A50059J4", NAME="arduinoSensors"
