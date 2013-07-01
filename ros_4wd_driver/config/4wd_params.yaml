@@ -6,8 +6,11 @@
 #drive_port: /dev/ttyACM0
 #sensor_port: /dev/ttyACM1
 
-drive_port: /dev/ttyS0
-sensor_port: /dev/ttyS1
+#drive_port: /dev/ttyS0
+#sensor_port: /dev/ttyS1
+
+drive_port: /dev/arduinoMotors
+sensor_port: /dev/arduinoSensors
 
 baud: 57600
 
