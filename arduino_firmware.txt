@@ -1,0 +1,45 @@
+Making Arduino firmware:
+
+1. install Arduino IDE
+http://arduino.cc/en/Main/Software
+(tested on 1.0.3, 1.0.4)
+
+2. connect Arduino board and select Serial port and Arduino version
+(Arduino Nano w/ ATmega 328)
+
+2. install 3rdparty libraries:
+* TimerOne 
+(tested v9)
+https://code.google.com/p/arduino-timerone/downloads/list
+
+* ultrasonic-HC-SR04
+http://robocraft.ru/files/sensors/Ultrasonic/HC-SR04/ultrasonic-HC-SR04.zip
+
+3. in Arduino sketchbook folder create directory with name:
+robot_4wd_firmware
+
+4. into robot_4wd_firmware folder copy source files:
+robot_4wd_firmware.ino
+orcp2.cpp
+orcp2.h
+robot_sensors.cpp
+robot_sensors.h
+robot_4wd.cpp
+robot_4wd.h
+types.h
+imu.cpp
+imu.h
+
+5. edit robot_4wd_firmware.ino
+
+for drive board - comment definition
+#define IMU_BOARD
+i.e. 
+// #define IMU_BOARD
+
+and vice versa, for sensor board comment definition:
+#define DRIVE_BOARD
+
+6. compile and load sketch into Arduino board
+
+Done!
