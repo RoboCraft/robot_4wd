@@ -30,6 +30,8 @@ types.h
 imu.cpp
 imu.h
 
+(from https://github.com/RoboCraft/robot_4wd/tree/master/orcp2)
+
 5. edit robot_4wd_firmware.ino
 
 for drive board - comment definition
