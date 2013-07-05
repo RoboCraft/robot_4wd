@@ -15,6 +15,7 @@
 #include "ros_4wd_driver/sensors_telemetry_4wd.h"
 #include "ros_4wd_driver/imu_raw_data.h"
 #include "ros_4wd_driver/orcp_string.h"
+#include "ros_4wd_driver/motor_write.h"
 
 #include "orcp2/orcp2.h"
 #include "orcp2/serial.h"
@@ -39,6 +40,8 @@ ros::Publisher imu_raw_data_pub;
 
 ros::Publisher odom_pub;
 ros::Subscriber cmd_vel_sub;
+
+ros::ServiceServer motor_service;
 
 std::string drive_serial_name = DEFAULT_DRIVE_SERIAL;
 std::string sensors_serial_name = DEFAULT_SENSORS_SERIAL;
@@ -380,6 +383,18 @@ void cmd_vel_received(const geometry_msgs::Twist::ConstPtr& cmd_vel)
     drive_serial_write.unlock();
 }
 
+bool motor_write(ros_4wd_driver::motor_write::Request  &req, 
+					ros_4wd_driver::motor_write::Response &res) {
+					
+	orcp2::ORCP2 orcp(drive_serial);
+
+    drive_serial_write.lock();
+	orcp.motorWrite(req.id, req.value);
+	drive_serial_write.unlock();
+	
+	return true;
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "robot_4wd_node");
@@ -389,6 +404,8 @@ int main(int argc, char **argv)
     drive_telemetry_pub = n.advertise<ros_4wd_driver::drive_telemetry_4wd>("drive_telemetry_4wd", 50);
     sensors_telemetry_pub = n.advertise<ros_4wd_driver::sensors_telemetry_4wd>("sensors_telemetry_4wd", 50);
     imu_raw_data_pub = n.advertise<ros_4wd_driver::imu_raw_data>("imu_raw_data", 50);
+	
+	motor_service = n.advertiseService("motor_write", motor_write);
 
     odom_pub = n.advertise<nav_msgs::Odometry>("odom", 50);
     cmd_vel_sub  = n.subscribe<geometry_msgs::Twist>("cmd_vel", 1, cmd_vel_received);
