@@ -54,5 +54,6 @@ before run robot_4wd_key you may change velocity scale:
 rosparam set /robot_4wd_teleop/scale_angular 2.0
 rosparam set /robot_4wd_teleop/scale_linear 2.0
 
-
+or when starting node:
+rosrun ros_4wd_driver robot_4wd_key _scale_angular:=2.0 _scale_linear:=2.0
 
