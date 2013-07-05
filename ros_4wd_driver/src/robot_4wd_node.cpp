@@ -361,7 +361,7 @@ void cmd_vel_received(const geometry_msgs::Twist::ConstPtr& cmd_vel)
             linear_speed > -std::numeric_limits<double>::epsilon() ) {
         // zero linear speed - turn in place
         uint16_t speed = speed_koef * angular_speed * wheel_track  * gear_reduction / 2.0;
-        orcp.drive_4wd(-speed, speed, -speed, speed);
+        orcp.drive_4wd(speed, -speed, speed, -speed);
     }
     else if( angular_speed <  std::numeric_limits<double>::epsilon() &&
              angular_speed > -std::numeric_limits<double>::epsilon() ) {
