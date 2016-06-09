@@ -8,6 +8,9 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
+#include <stdint.h>
+#include <stddef.h>
+
 #if defined(WIN32)
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
@@ -73,7 +76,6 @@ typedef __kernel_pid_t          pid_t;
 typedef int socklen_t;
 
 #elif defined(LINUX)
-# include <stdint.h>
 
 typedef unsigned long       DWORD;
 typedef int                 BOOL;
@@ -108,7 +110,6 @@ typedef const char*			LPCTSTR;
 # endif
 
 # include <inttypes.h>
-# include <stdio.h> // for size_t
 
 #endif //#if defined(WIN32)
 

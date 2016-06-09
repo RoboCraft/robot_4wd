@@ -122,7 +122,7 @@ namespace orcp2 {
 
 #ifndef ARDUINO
 	// get packet from data
-	uint16_t get_packet(uint8_t* src, uint32_t& src_size, packet* pkt);
+	uint16_t get_packet(uint8_t* src, size_t& src_size, packet* pkt);
 
 	// serialize packet to message
 	uint16_t to_buffer(packet* pkt, uint8_t* dst, uint16_t dst_size);

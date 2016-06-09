@@ -7,6 +7,7 @@
 //
 
 #include "orcp2.h"
+#include <string.h>
 
 uint8_t orcp2::calc_checksum (uint8_t *src, size_t src_size)
 {
@@ -97,13 +98,13 @@ uint16_t orcp2::to_buffer(uint16_t message_type, uint8_t* src, uint16_t src_size
 
 #ifndef ARDUINO
 
-uint16_t orcp2::get_packet(uint8_t* src, uint32_t& src_size, packet* pkt)
+uint16_t orcp2::get_packet(uint8_t* src, size_t& src_size, packet* pkt)
 {
 	if(!src || src_size < ORCP2_MIN_PACKET_LENGTH || !pkt)
 		return 0;
 
 	bool packet_finded = false;
-	uint32_t i, j, k, pkt_begin=0;
+	size_t i, j, k, pkt_begin=0;
 	uint16_t pkt_size = 0;
 
 	for(i=0; i<src_size-1; i++) {
